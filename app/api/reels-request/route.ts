@@ -18,6 +18,21 @@ const ALLOWED_VIDEO_TYPES = [
 
 export async function POST(request: NextRequest) {
   try {
+    // 환경 변수 확인
+    if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
+      console.error('Google API 환경 변수가 설정되지 않았습니다.');
+      return NextResponse.json<ApiResponse>(
+        {
+          success: false,
+          error: {
+            message: '서버 설정 오류가 발생했습니다. 관리자에게 문의해주세요.',
+            code: 'SERVER_CONFIG_ERROR',
+          },
+        },
+        { status: 500 }
+      );
+    }
+
     // FormData 파싱
     const formData = await request.formData();
 

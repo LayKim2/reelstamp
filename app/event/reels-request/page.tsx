@@ -148,6 +148,14 @@ export default function ReelsRequestPage() {
         body: formData,
       });
 
+      // Content-Type 확인
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('API 응답이 JSON이 아닙니다:', text.substring(0, 200));
+        throw new Error('서버 응답 형식 오류가 발생했습니다. 관리자에게 문의해주세요.');
+      }
+
       const result = await response.json();
 
       if (!response.ok || !result.success) {
