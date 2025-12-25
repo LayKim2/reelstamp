@@ -11,6 +11,13 @@ export function normalizePrivateKey(privateKey: string | undefined): string {
 
   // 공백 제거 (앞뒤 공백)
   let normalized = privateKey.trim();
+  
+  // 따옴표 제거 (.env 파일에서 따옴표로 감싼 경우 처리)
+  // Vercel 환경 변수에서는 따옴표가 포함될 수 있으므로 제거
+  if ((normalized.startsWith('"') && normalized.endsWith('"')) || 
+      (normalized.startsWith("'") && normalized.endsWith("'"))) {
+    normalized = normalized.slice(1, -1);
+  }
 
   // BEGIN/END 마커 확인 (먼저 확인하여 형식 검증)
   if (!normalized.includes('-----BEGIN')) {
