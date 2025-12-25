@@ -16,6 +16,7 @@ export interface ReelsRequestPayload {
   content: string;
   instagramId: string;
   additionalContent?: string;
+  videoLength?: string;
   fileName?: string;
   fileUrl?: string;
 }
@@ -39,5 +40,6 @@ export interface SpreadsheetRow {
   additionalContent: string;
   fileName: string;
   fileUrl?: string;
+  videoLength?: string;
 }
 

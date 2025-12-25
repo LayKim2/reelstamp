@@ -13,6 +13,7 @@ export async function POST(request: NextRequest) {
     const content = body.content as string;
     const instagramId = body.instagramId as string;
     const additionalContent = body.additionalContent as string | null;
+    const videoLength = body.videoLength as string | null;
     // 업로드된 파일 정보 (이미 GCS에 업로드됨)
     const files = body.files as Array<{ fileName: string; fileUrl: string }> || [];
 
@@ -50,23 +51,26 @@ export async function POST(request: NextRequest) {
       fileUrl = files.map((f) => f.fileUrl).join(', '); // presigned URL 저장
     }
 
-    // Spreadsheet 헤더 초기화
+    // Spreadsheet 헤더 초기화와 데이터 추가를 병렬 처리 (성능 최적화)
     const { initializeSheetHeaders } = await import('@/app/lib/google/sheets');
-    await initializeSheetHeaders().catch((error) => {
-      console.warn('헤더 초기화 경고:', error);
-    });
-
-    // Spreadsheet에 데이터 추가
+    
     try {
-      await appendToSheet({
-        timestamp,
-        topic,
-        content,
-        instagramId,
-        additionalContent: additionalContent || '',
-        fileName,
-        fileUrl,
-      });
+      // 헤더 초기화와 데이터 추가를 병렬로 실행
+      await Promise.all([
+        initializeSheetHeaders().catch((error) => {
+          console.warn('헤더 초기화 경고:', error);
+        }),
+        appendToSheet({
+          timestamp,
+          topic,
+          content,
+          instagramId,
+          additionalContent: additionalContent || '',
+          fileName,
+          fileUrl,
+          videoLength: videoLength || '',
+        }),
+      ]);
     } catch (error) {
       console.error('Spreadsheet 저장 실패:', error);
       const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';

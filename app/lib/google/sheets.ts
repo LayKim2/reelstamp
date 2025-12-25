@@ -18,7 +18,7 @@ export async function initializeSheetHeaders() {
     // 기존 데이터 확인
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A1:G1`,
+      range: `${SHEET_NAME}!A1:H1`,
     });
 
     // 헤더가 이미 있으면 스킵
@@ -29,7 +29,7 @@ export async function initializeSheetHeaders() {
     // 헤더 추가 (insta를 맨 앞으로, 신청일을 맨 마지막 컬럼으로)
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A1:G1`,
+      range: `${SHEET_NAME}!A1:H1`,
       valueInputOption: 'RAW',
       requestBody: {
         values: [
@@ -40,6 +40,7 @@ export async function initializeSheetHeaders() {
             '추가 내용',
             '파일명',
             '파일 URL',
+            '영상 길이',
             '신청일',
           ],
         ],
@@ -69,7 +70,7 @@ export async function appendToSheet(data: SpreadsheetRow) {
     // 데이터 추가 (insta를 맨 앞으로, 신청일을 맨 마지막 컬럼으로)
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A:G`,
+      range: `${SHEET_NAME}!A:H`,
       valueInputOption: 'RAW',
       requestBody: {
         values: [
@@ -80,6 +81,7 @@ export async function appendToSheet(data: SpreadsheetRow) {
             data.additionalContent || '',
             data.fileName || '',
             data.fileUrl || '',
+            data.videoLength || '', // 영상 길이
             data.timestamp, // 신청일을 맨 마지막으로
           ],
         ],

@@ -3,6 +3,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Paperclip, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import Image from 'next/image';
+import Modal from '@/app/components/ui/Modal';
+import LoadingOverlay from '@/app/components/ui/LoadingOverlay';
 
 // 릴스 기획·대본 이벤트 신청 폼 페이지
 export default function ReelsRequestPage() {
@@ -33,6 +36,7 @@ export default function ReelsRequestPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // 영상 길이 제한: 25분 (1500초)
   const MAX_VIDEO_DURATION = 25 * 60; // 25분 = 1500초
@@ -191,6 +195,7 @@ export default function ReelsRequestPage() {
         content,
         instagramId,
         additionalContent: additionalContent || null,
+        videoLength: videoLength || null,
         files: uploadedFiles,
       };
 
@@ -227,10 +232,8 @@ export default function ReelsRequestPage() {
         fileInputRef.current.value = '';
       }
 
-      // 3초 후 성공 메시지 숨김
-      setTimeout(() => {
-        setSubmitSuccess(false);
-      }, 3000);
+      // 성공 모달 표시
+      setShowSuccessModal(true);
     } catch (error) {
       console.error('제출 실패:', error);
       setSubmitError(error instanceof Error ? error.message : '신청 처리 중 오류가 발생했습니다.');
@@ -554,12 +557,6 @@ export default function ReelsRequestPage() {
             </div>
           )}
 
-          {/* 성공 메시지 */}
-          {submitSuccess && (
-            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-sm text-green-600">신청이 완료되었습니다!</p>
-            </div>
-          )}
 
           {/* 버튼 */}
           <div className="flex gap-4 pt-4">
@@ -573,6 +570,26 @@ export default function ReelsRequestPage() {
           </div>
         </form>
       </div>
+
+      {/* 로딩 오버레이 */}
+      <LoadingOverlay isVisible={isSubmitting} />
+
+      {/* 신청 완료 모달 */}
+      <Modal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        title="신청 완료"
+        description="Insta DM으로 연락드리겠습니다."
+        icon={
+          <Image
+            src="/images/logo.png"
+            alt="BooQuest"
+            width={120}
+            height={120}
+            className="w-[120px] h-[120px]"
+          />
+        }
+      />
     </div>
   );
 }
