@@ -72,11 +72,25 @@ export async function POST(request: NextRequest) {
       storage = getStorageClient();
     } catch (error) {
       console.error('Storage 클라이언트 초기화 실패:', error);
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      
+      // Private key 관련 에러인 경우 더 자세한 정보 제공
+      if (errorMessage.includes('PRIVATE KEY') || errorMessage.includes('DECODER')) {
+        console.error('Private key 형식 오류 가능성:', {
+          hasPrivateKey: !!process.env.GOOGLE_PRIVATE_KEY,
+          privateKeyLength: process.env.GOOGLE_PRIVATE_KEY?.length || 0,
+          startsWithBegin: process.env.GOOGLE_PRIVATE_KEY?.includes('-----BEGIN'),
+          endsWithEnd: process.env.GOOGLE_PRIVATE_KEY?.includes('-----END'),
+        });
+      }
+      
       return NextResponse.json(
         {
           success: false,
           error: {
-            message: '서버 설정 오류가 발생했습니다. 관리자에게 문의해주세요.',
+            message: errorMessage.includes('PRIVATE KEY') || errorMessage.includes('DECODER')
+              ? 'Private key 형식 오류입니다. Vercel 환경 변수에서 GOOGLE_PRIVATE_KEY가 올바르게 설정되었는지 확인해주세요.'
+              : '서버 설정 오류가 발생했습니다. 관리자에게 문의해주세요.',
             code: 'STORAGE_CLIENT_INIT_FAILED',
           },
         },
