@@ -143,6 +143,7 @@ export default function ReelsRequestPage() {
               fileName: file.name,
               fileSize: file.size,
               contentType: file.type,
+              instagramId: instagramId, 
             }),
           });
 

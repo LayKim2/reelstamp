@@ -39,9 +39,9 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { fileName, fileSize, contentType } = body;
+    const { fileName, fileSize, contentType, instagramId } = body;
 
-    if (!fileName || !fileSize || !contentType) {
+    if (!fileName || !fileSize || !contentType || !instagramId) {
       return NextResponse.json(
         {
           success: false,
@@ -54,10 +54,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 파일 경로 생성
+    // 파일 경로 생성: insta id + datetime + 랜덤숫자
     const timestamp = Date.now();
-    const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const filePath = `reels-requests/${timestamp}_${sanitizedFileName}`;
+    const randomNum = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    const sanitizedInstaId = instagramId.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const fileExtension = fileName.split('.').pop() || 'mp4';
+    const newFileName = `${sanitizedInstaId}_${timestamp}_${randomNum}.${fileExtension}`;
+    const filePath = `reels-requests/${newFileName}`;
 
     const storage = getStorageClient();
     const bucket = storage.bucket(BUCKET_NAME);

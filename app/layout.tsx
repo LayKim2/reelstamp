@@ -2,6 +2,7 @@
 // 헤더와 메인 콘텐츠 영역을 포함하는 기본 구조
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import "./globals.css";
 import Header from "@/app/components/ui/Header";
 
@@ -29,6 +30,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+
   return (
     <html lang="ko">
       <body
@@ -41,6 +44,11 @@ export default function RootLayout({
         <main className="flex-1">
           {children}
         </main>
+
+        {/* Google Analytics 4 */}
+        {gaMeasurementId && (
+          <GoogleAnalytics gaId={gaMeasurementId} />
+        )}
       </body>
     </html>
   );
