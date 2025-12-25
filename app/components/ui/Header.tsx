@@ -71,7 +71,7 @@ export default function Header() {
             {/* 로그인 버튼 */}
             <Link
               href="/auth/login"
-              className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-[#EB48B1] to-[#F59A39] rounded-lg hover:from-[#D93D9F] hover:to-[#E6892F] transition-all shadow-md hover:shadow-lg"
             >
               로그인
             </Link>
