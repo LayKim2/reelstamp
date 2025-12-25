@@ -1,6 +1,7 @@
 // GCS 업로드용 presigned URL 생성 API: 클라이언트에서 직접 파일을 업로드할 수 있도록 presigned URL 제공
 import { NextRequest, NextResponse } from 'next/server';
 import { Storage } from '@google-cloud/storage';
+import { normalizePrivateKey } from '@/app/lib/google/utils';
 
 const BUCKET_NAME = process.env.GCS_BUCKET_NAME;
 const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT_ID;
@@ -15,7 +16,7 @@ function getStorageClient() {
     projectId: PROJECT_ID,
     credentials: {
       client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      private_key: normalizePrivateKey(process.env.GOOGLE_PRIVATE_KEY),
     },
   });
 
