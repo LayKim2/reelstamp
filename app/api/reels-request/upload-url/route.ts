@@ -26,11 +26,17 @@ export async function POST(request: NextRequest) {
   try {
     // 환경 변수 확인
     if (!BUCKET_NAME || !PROJECT_ID) {
+      console.error('환경 변수 누락:', {
+        BUCKET_NAME: !!BUCKET_NAME,
+        PROJECT_ID: !!PROJECT_ID,
+        SERVICE_ACCOUNT_EMAIL: !!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+        PRIVATE_KEY: !!process.env.GOOGLE_PRIVATE_KEY,
+      });
       return NextResponse.json(
         {
           success: false,
           error: {
-            message: '서버 설정 오류가 발생했습니다.',
+            message: '서버 설정 오류가 발생했습니다. 관리자에게 문의해주세요.',
             code: 'SERVER_CONFIG_ERROR',
           },
         },
@@ -59,24 +65,59 @@ export async function POST(request: NextRequest) {
     const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
     const filePath = `reels-requests/${timestamp}_${sanitizedFileName}`;
 
-    const storage = getStorageClient();
+    // Storage 클라이언트 초기화 (에러 처리 포함)
+    let storage;
+    try {
+      storage = getStorageClient();
+    } catch (error) {
+      console.error('Storage 클라이언트 초기화 실패:', error);
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            message: '서버 설정 오류가 발생했습니다. 관리자에게 문의해주세요.',
+            code: 'STORAGE_CLIENT_INIT_FAILED',
+          },
+        },
+        { status: 500 }
+      );
+    }
+
     const bucket = storage.bucket(BUCKET_NAME);
     const file = bucket.file(filePath);
 
     // 업로드용 presigned URL 생성 (15분 유효)
-    const [signedUrl] = await file.getSignedUrl({
-      version: 'v4',
-      action: 'write',
-      expires: Date.now() + 15 * 60 * 1000, // 15분
-      contentType,
-    });
+    let signedUrl: string;
+    let downloadUrl: string;
+    
+    try {
+      [signedUrl] = await file.getSignedUrl({
+        version: 'v4',
+        action: 'write',
+        expires: Date.now() + 15 * 60 * 1000, // 15분
+        contentType,
+      });
 
-    // 다운로드용 presigned URL도 생성 (1년 유효)
-    const [downloadUrl] = await file.getSignedUrl({
-      version: 'v4',
-      action: 'read',
-      expires: Date.now() + 365 * 24 * 60 * 60 * 1000, // 1년
-    });
+      // 다운로드용 presigned URL도 생성 (1년 유효)
+      [downloadUrl] = await file.getSignedUrl({
+        version: 'v4',
+        action: 'read',
+        expires: Date.now() + 365 * 24 * 60 * 60 * 1000, // 1년
+      });
+    } catch (error) {
+      console.error('Presigned URL 생성 실패:', error);
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            message: `업로드 URL 생성에 실패했습니다: ${errorMessage}`,
+            code: 'SIGNED_URL_GENERATION_FAILED',
+          },
+        },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
@@ -89,11 +130,12 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Presigned URL 생성 실패:', error);
+    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
     return NextResponse.json(
       {
         success: false,
         error: {
-          message: '업로드 URL 생성에 실패했습니다.',
+          message: `업로드 URL 생성에 실패했습니다: ${errorMessage}`,
           code: 'UPLOAD_URL_GENERATION_FAILED',
         },
       },

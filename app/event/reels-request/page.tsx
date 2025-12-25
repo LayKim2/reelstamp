@@ -147,7 +147,14 @@ export default function ReelsRequestPage() {
           });
 
           if (!urlResponse.ok) {
-            const errorData = await urlResponse.json();
+            let errorData;
+            try {
+              errorData = await urlResponse.json();
+            } catch {
+              const text = await urlResponse.text();
+              console.error('API 응답 파싱 실패:', text.substring(0, 200));
+              throw new Error(`서버 오류가 발생했습니다. (${urlResponse.status})`);
+            }
             throw new Error(errorData.error?.message || '업로드 URL 생성에 실패했습니다.');
           }
 
