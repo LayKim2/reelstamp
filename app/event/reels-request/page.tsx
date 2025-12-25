@@ -178,7 +178,7 @@ export default function ReelsRequestPage() {
 
           uploadedFiles.push({
             fileName: file.name,
-            fileUrl: urlData.data.downloadUrl,
+            fileUrl: urlData.data.storageUrl,
           });
         }
       }
