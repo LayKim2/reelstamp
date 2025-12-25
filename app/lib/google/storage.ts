@@ -73,10 +73,12 @@ export async function uploadFileToGCS(
     // 파일 URL 생성
     const publicUrl = `https://storage.googleapis.com/${BUCKET_NAME}/${filePath}`;
     
-    // 서명된 URL 생성 (만료 시간: 1년)
+    // 서명된 URL 생성 (만료 시간: 최대 7일, GCS 제한)
+    // 7일 = 7 * 24 * 60 * 60 * 1000 = 604800000 밀리초
+    const maxExpiry = 7 * 24 * 60 * 60 * 1000; // 7일
     const [signedUrl] = await fileUpload.getSignedUrl({
       action: 'read',
-      expires: Date.now() + 365 * 24 * 60 * 60 * 1000, // 1년
+      expires: Date.now() + maxExpiry, // 7일 (GCS 최대 만료 시간)
     });
 
     console.log('GCS 파일 업로드 성공:', {

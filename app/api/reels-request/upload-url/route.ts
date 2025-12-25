@@ -113,11 +113,13 @@ export async function POST(request: NextRequest) {
         contentType,
       });
 
-      // 다운로드용 presigned URL도 생성 (1년 유효)
+      // 다운로드용 presigned URL 생성 (최대 7일, GCS 제한)
+      // 7일 = 7 * 24 * 60 * 60 * 1000 = 604800000 밀리초
+      const maxExpiry = 7 * 24 * 60 * 60 * 1000; // 7일
       [downloadUrl] = await file.getSignedUrl({
         version: 'v4',
         action: 'read',
-        expires: Date.now() + 365 * 24 * 60 * 60 * 1000, // 1년
+        expires: Date.now() + maxExpiry, // 7일 (GCS 최대 만료 시간)
       });
     } catch (error) {
       console.error('Presigned URL 생성 실패:', error);
