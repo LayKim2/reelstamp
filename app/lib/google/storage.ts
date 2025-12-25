@@ -26,7 +26,7 @@ function getStorageClient() {
 export async function uploadFileToGCS(
   file: File,
   folderPath?: string
-): Promise<{ fileName: string; fileUrl: string }> {
+): Promise<{ fileName: string; fileUrl: string; publicUrl?: string }> {
   if (!BUCKET_NAME) {
     throw new Error('GCS_BUCKET_NAME 환경 변수가 설정되지 않았습니다.');
   }
@@ -66,18 +66,29 @@ export async function uploadFileToGCS(
       },
     });
 
-    // 파일 URL 생성 (Storage URL - IAM 권한이 있는 사용자만 접근 가능)
-    const fileUrl = `https://storage.googleapis.com/${BUCKET_NAME}/${filePath}`;
+    // 파일을 공개로 설정 (선택사항)
+    // await fileUpload.makePublic();
+
+    // 파일 URL 생성
+    const publicUrl = `https://storage.googleapis.com/${BUCKET_NAME}/${filePath}`;
+    
+    // 서명된 URL 생성 (만료 시간: 1년)
+    const [signedUrl] = await fileUpload.getSignedUrl({
+      action: 'read',
+      expires: Date.now() + 365 * 24 * 60 * 60 * 1000, // 1년
+    });
 
     console.log('GCS 파일 업로드 성공:', {
       fileName: file.name,
       filePath,
-      fileUrl,
+      publicUrl,
+      signedUrl,
     });
 
     return {
       fileName: file.name,
-      fileUrl,
+      fileUrl: signedUrl, // 서명된 URL 사용 (더 안전)
+      publicUrl, // 공개 URL (선택사항)
     };
   } catch (error: any) {
     console.error('GCS 파일 업로드 실패:', error);

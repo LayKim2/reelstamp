@@ -119,7 +119,7 @@ export default function ReelsRequestPage() {
     }
   };
 
-  // 제출 핸들러: 파일을 직접 GCS에 업로드한 후 폼 데이터 전송
+  // 제출 핸들러: 파일을 presigned URL로 직접 업로드한 후 폼 데이터 전송
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -176,37 +176,24 @@ export default function ReelsRequestPage() {
             throw new Error(`파일 업로드에 실패했습니다: ${file.name}`);
           }
 
-          // 3. 업로드 후 객체를 public으로 설정
-          const makePublicResponse = await fetch('/api/reels-request/make-public', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              filePath: urlData.data.filePath,
-            }),
-          });
-
-          if (!makePublicResponse.ok) {
-            console.warn('객체를 public으로 설정하는데 실패했습니다. Storage URL로 접근이 제한될 수 있습니다.');
-          }
-
+          // 3. 읽기용 presigned URL 저장 (원래 코드와 동일)
           uploadedFiles.push({
             fileName: file.name,
-            fileUrl: urlData.data.storageUrl, // Storage URL 사용
+            fileUrl: urlData.data.readUrl, // 읽기용 presigned URL (1년 유효)
           });
         }
       }
 
-      // 3. 폼 데이터 전송 (파일 URL 포함)
+      // 4. 폼 데이터 전송 (파일 URL 포함)
       const formData = {
         topic,
         content,
         instagramId,
-        additionalContent: additionalContent || '',
+        additionalContent: additionalContent || null,
         files: uploadedFiles,
       };
 
+      // API 엔드포인트 호출
       const response = await fetch('/api/reels-request', {
         method: 'POST',
         headers: {
@@ -214,14 +201,6 @@ export default function ReelsRequestPage() {
         },
         body: JSON.stringify(formData),
       });
-
-      // Content-Type 확인
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const text = await response.text();
-        console.error('API 응답이 JSON이 아닙니다:', text.substring(0, 200));
-        throw new Error('서버 응답 형식 오류가 발생했습니다. 관리자에게 문의해주세요.');
-      }
 
       const result = await response.json();
 

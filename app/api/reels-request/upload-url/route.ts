@@ -7,6 +7,10 @@ const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT_ID;
 
 // Google Cloud Storage 클라이언트 초기화
 function getStorageClient() {
+  if (!PROJECT_ID) {
+    throw new Error('GOOGLE_CLOUD_PROJECT_ID 환경 변수가 설정되지 않았습니다.');
+  }
+
   const storage = new Storage({
     projectId: PROJECT_ID,
     credentials: {
@@ -20,6 +24,20 @@ function getStorageClient() {
 
 export async function POST(request: NextRequest) {
   try {
+    // 환경 변수 체크
+    if (!BUCKET_NAME) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            message: 'GCS_BUCKET_NAME 환경 변수가 설정되지 않았습니다.',
+            code: 'MISSING_BUCKET_NAME',
+          },
+        },
+        { status: 500 }
+      );
+    }
+
     const body = await request.json();
     const { fileName, fileSize, contentType } = body;
 
@@ -42,36 +60,39 @@ export async function POST(request: NextRequest) {
     const filePath = `reels-requests/${timestamp}_${sanitizedFileName}`;
 
     const storage = getStorageClient();
-    const bucket = storage.bucket(BUCKET_NAME!);
+    const bucket = storage.bucket(BUCKET_NAME);
     const file = bucket.file(filePath);
 
     // 업로드용 presigned URL 생성 (15분 유효)
     const [uploadUrl] = await file.getSignedUrl({
-      version: 'v4',
       action: 'write',
       expires: Date.now() + 15 * 60 * 1000, // 15분
       contentType,
     });
 
-    // Storage URL 생성 (업로드 후 객체를 public으로 설정하면 접근 가능)
-    const storageUrl = `https://storage.googleapis.com/${BUCKET_NAME}/${filePath}`;
+    // 읽기용 presigned URL 생성 (1개월 유효)
+    const [readUrl] = await file.getSignedUrl({
+      action: 'read',
+      expires: Date.now() + 30 * 24 * 60 * 60 * 1000, // 1개월
+    });
 
     return NextResponse.json({
       success: true,
       data: {
         uploadUrl,
-        storageUrl, // Storage URL (업로드 후 public으로 설정)
+        readUrl, // 읽기용 presigned URL (spreadsheet에 저장)
         filePath,
         fileName: fileName,
       },
     });
   } catch (error) {
     console.error('업로드 URL 생성 실패:', error);
+    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
     return NextResponse.json(
       {
         success: false,
         error: {
-          message: '업로드 URL 생성에 실패했습니다.',
+          message: `업로드 URL 생성에 실패했습니다: ${errorMessage}`,
           code: 'UPLOAD_URL_GENERATION_FAILED',
         },
       },

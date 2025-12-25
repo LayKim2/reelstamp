@@ -1,20 +1,7 @@
-// 릴스 기획·대본 이벤트 신청 API 라우트: 폼 데이터를 Google Sheets에 저장하고 파일을 Google Cloud Storage에 업로드
+// 릴스 기획·대본 이벤트 신청 API 라우트: 폼 데이터를 Google Sheets에 저장 (파일은 이미 클라이언트에서 presigned URL로 업로드됨)
 import { NextRequest, NextResponse } from 'next/server';
 import { appendToSheet } from '@/app/lib/google/sheets';
-import { uploadFileToGCS } from '@/app/lib/google/storage';
 import { ApiResponse, ReelsRequestPayload } from '@/app/types/reels-request';
-
-// 영상 길이 제한: 25분 (1500초)
-const MAX_VIDEO_DURATION = 25 * 60; // 25분 = 1500초
-
-// 허용된 비디오 파일 타입
-const ALLOWED_VIDEO_TYPES = [
-  'video/mp4',
-  'video/quicktime',
-  'video/x-msvideo',
-  'video/webm',
-  'video/3gpp',
-];
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,7 +29,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 타임스탬프 생성 (파일 업로드와 병렬 처리 가능)
+    // 타임스탬프 생성
     const timestamp = new Date().toLocaleString('ko-KR', {
       timeZone: 'Asia/Seoul',
       year: 'numeric',
@@ -60,7 +47,7 @@ export async function POST(request: NextRequest) {
     if (files.length > 0) {
       // 파일명과 URL을 쉼표로 구분하여 저장
       fileName = files.map((f) => f.fileName).join(', ');
-      fileUrl = files.map((f) => f.fileUrl).join(', ');
+      fileUrl = files.map((f) => f.fileUrl).join(', '); // presigned URL 저장
     }
 
     // Spreadsheet 헤더 초기화
