@@ -1,6 +1,5 @@
 // Google Cloud Storage 헬퍼 함수: 파일 업로드 기능 제공
 import { Storage } from '@google-cloud/storage';
-import { normalizePrivateKey } from './utils';
 
 const BUCKET_NAME = process.env.GCS_BUCKET_NAME;
 const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT_ID;
@@ -16,7 +15,7 @@ function getStorageClient() {
     projectId: PROJECT_ID,
     credentials: {
       client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      private_key: normalizePrivateKey(process.env.GOOGLE_PRIVATE_KEY),
+      private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
     },
   });
 

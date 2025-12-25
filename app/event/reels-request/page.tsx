@@ -176,9 +176,24 @@ export default function ReelsRequestPage() {
             throw new Error(`파일 업로드에 실패했습니다: ${file.name}`);
           }
 
+          // 3. 업로드 후 객체를 public으로 설정
+          const makePublicResponse = await fetch('/api/reels-request/make-public', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              filePath: urlData.data.filePath,
+            }),
+          });
+
+          if (!makePublicResponse.ok) {
+            console.warn('객체를 public으로 설정하는데 실패했습니다. Storage URL로 접근이 제한될 수 있습니다.');
+          }
+
           uploadedFiles.push({
             fileName: file.name,
-            fileUrl: urlData.data.storageUrl,
+            fileUrl: urlData.data.storageUrl, // Storage URL 사용
           });
         }
       }
