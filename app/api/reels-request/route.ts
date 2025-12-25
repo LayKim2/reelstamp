@@ -33,16 +33,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // FormData 파싱
-    const formData = await request.formData();
+    // JSON body 파싱
+    const body = await request.json();
 
     // 필수 필드 검증
-    const topic = formData.get('topic') as string;
-    const content = formData.get('content') as string;
-    const instagramId = formData.get('instagramId') as string;
-    const additionalContent = formData.get('additionalContent') as string | null;
-    // 여러 파일 가져오기
-    const videoFiles = formData.getAll('videoFiles') as File[];
+    const topic = body.topic as string;
+    const content = body.content as string;
+    const instagramId = body.instagramId as string;
+    const additionalContent = body.additionalContent as string | null;
+    // 업로드된 파일 정보 (이미 GCS에 업로드됨)
+    const files = body.files as Array<{ fileName: string; fileUrl: string }> || [];
 
     if (!topic || !content || !instagramId) {
       return NextResponse.json<ApiResponse>(
@@ -68,74 +68,21 @@ export async function POST(request: NextRequest) {
       second: '2-digit',
     });
 
-    // 파일 검증 및 업로드 (파일이 있는 경우)
+    // 파일 정보 처리 (이미 클라이언트에서 GCS에 업로드됨)
     let fileName: string = '';
     let fileUrl: string = '';
 
-    // 유효한 파일만 필터링 (크기가 0보다 큰 파일)
-    const validFiles = videoFiles.filter((file) => file.size > 0);
-
-    // 파일 업로드와 Spreadsheet 헤더 초기화를 병렬로 처리 (최적화)
-    if (validFiles.length > 0) {
-      // 모든 파일 타입 검증
-      for (const file of validFiles) {
-        if (!ALLOWED_VIDEO_TYPES.includes(file.type)) {
-          return NextResponse.json<ApiResponse>(
-            {
-              success: false,
-              error: {
-                message: `지원하지 않는 파일 형식입니다: ${file.name}`,
-                code: 'INVALID_FILE_TYPE',
-              },
-            },
-            { status: 400 }
-          );
-        }
-      }
-
-      // 파일 업로드와 헤더 초기화를 병렬로 처리
-      const { initializeSheetHeaders } = await import('@/app/lib/google/sheets');
-      
-      try {
-        // 모든 파일을 병렬로 업로드
-        const uploadPromises = validFiles.map((file) =>
-          uploadFileToGCS(file, 'reels-requests')
-        );
-
-        const [uploadResults] = await Promise.all([
-          // 모든 파일 업로드
-          Promise.all(uploadPromises),
-          // Spreadsheet 헤더 초기화 (파일과 무관하므로 병렬 처리)
-          initializeSheetHeaders().catch((error) => {
-            // 헤더 초기화 실패는 무시 (이미 헤더가 있을 수 있음)
-            console.warn('헤더 초기화 경고:', error);
-          }),
-        ]);
-
-        // 파일명과 URL을 쉼표로 구분하여 저장
-        fileName = uploadResults.map((result) => result.fileName).join(', ');
-        fileUrl = uploadResults.map((result) => result.fileUrl).join(', ');
-      } catch (error) {
-        console.error('파일 업로드 실패:', error);
-        const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
-        return NextResponse.json<ApiResponse>(
-          {
-            success: false,
-            error: {
-              message: `파일 업로드에 실패했습니다: ${errorMessage}`,
-              code: 'FILE_UPLOAD_FAILED',
-            },
-          },
-          { status: 500 }
-        );
-      }
-    } else {
-      // 파일이 없으면 헤더만 초기화
-      const { initializeSheetHeaders } = await import('@/app/lib/google/sheets');
-      await initializeSheetHeaders().catch((error) => {
-        console.warn('헤더 초기화 경고:', error);
-      });
+    if (files.length > 0) {
+      // 파일명과 URL을 쉼표로 구분하여 저장
+      fileName = files.map((f) => f.fileName).join(', ');
+      fileUrl = files.map((f) => f.fileUrl).join(', ');
     }
+
+    // Spreadsheet 헤더 초기화
+    const { initializeSheetHeaders } = await import('@/app/lib/google/sheets');
+    await initializeSheetHeaders().catch((error) => {
+      console.warn('헤더 초기화 경고:', error);
+    });
 
     // Spreadsheet에 데이터 추가
     try {

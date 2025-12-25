@@ -119,7 +119,7 @@ export default function ReelsRequestPage() {
     }
   };
 
-  // 제출 핸들러: 폼 데이터를 FormData로 변환하여 API 엔드포인트로 전송
+  // 제출 핸들러: 파일을 직접 GCS에 업로드한 후 폼 데이터 전송
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -127,25 +127,70 @@ export default function ReelsRequestPage() {
     setSubmitSuccess(false);
 
     try {
-      // FormData 생성
-      const formData = new FormData();
-      formData.append('topic', topic);
-      formData.append('content', content);
-      formData.append('instagramId', instagramId);
+      // 파일 업로드 (presigned URL 사용)
+      const uploadedFiles: Array<{ fileName: string; fileUrl: string }> = [];
       
-      if (additionalContent) {
-        formData.append('additionalContent', additionalContent);
-      }
-      
-      // 여러 파일 추가
-      videoFiles.forEach((file) => {
-        formData.append('videoFiles', file);
-      });
+      if (videoFiles.length > 0) {
+        // 각 파일에 대해 presigned URL 생성 및 업로드
+        for (const file of videoFiles) {
+          // 1. Presigned URL 생성 요청
+          const urlResponse = await fetch('/api/reels-request/upload-url', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              fileName: file.name,
+              fileSize: file.size,
+              contentType: file.type,
+            }),
+          });
 
-      // API 엔드포인트 호출
+          if (!urlResponse.ok) {
+            const errorData = await urlResponse.json();
+            throw new Error(errorData.error?.message || '업로드 URL 생성에 실패했습니다.');
+          }
+
+          const urlData = await urlResponse.json();
+          if (!urlData.success) {
+            throw new Error(urlData.error?.message || '업로드 URL 생성에 실패했습니다.');
+          }
+
+          // 2. Presigned URL로 파일 직접 업로드
+          const uploadResponse = await fetch(urlData.data.uploadUrl, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': file.type,
+            },
+            body: file,
+          });
+
+          if (!uploadResponse.ok) {
+            throw new Error(`파일 업로드에 실패했습니다: ${file.name}`);
+          }
+
+          uploadedFiles.push({
+            fileName: file.name,
+            fileUrl: urlData.data.downloadUrl,
+          });
+        }
+      }
+
+      // 3. 폼 데이터 전송 (파일 URL 포함)
+      const formData = {
+        topic,
+        content,
+        instagramId,
+        additionalContent: additionalContent || '',
+        files: uploadedFiles,
+      };
+
       const response = await fetch('/api/reels-request', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
       });
 
       // Content-Type 확인
