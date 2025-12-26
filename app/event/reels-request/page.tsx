@@ -591,9 +591,21 @@ export default function ReelsRequestPage() {
                     transition={{ duration: 0.2, ease: 'easeInOut' }}
                     className="overflow-hidden pl-7"
                   >
-                    <div className="text-xs text-gray-600 leading-relaxed">
-                      <p>이벤트 참여자 확인 및 결과물 전달을 위해 개인정보를 수집·이용합니다.</p>
-                      <p className="mt-0.5">이벤트 종료 및 결과물 전달 완료 후 즉시 파기됩니다.</p>
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3.5 mt-2">
+                      <div className="text-xs text-gray-700 leading-relaxed space-y-2.5">
+                        <p className="flex items-start gap-2">
+                          <span className="text-gray-400 mt-0.5">•</span>
+                          <span>이벤트 신청 확인 및 결과물 전달을 위해 개인정보를 수집·이용합니다.</span>
+                        </p>
+                        <p className="flex items-start gap-2">
+                          <span className="text-gray-400 mt-0.5">•</span>
+                          <span>이벤트 종료 및 결과물 전달 완료 후 업로드된 영상 파일과 입력하신 신청 내용은 즉시 파기됩니다.</span>
+                        </p>
+                        <p className="flex items-start gap-2">
+                          <span className="text-gray-400 mt-0.5">•</span>
+                          <span>이벤트를 통해 완성된 결과물은 릴스탬프의 홍보 및 마케팅을 위해 활용될 수 있습니다.</span>
+                        </p>
+                      </div>
                     </div>
                   </motion.div>
                 )}
