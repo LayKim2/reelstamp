@@ -21,8 +21,11 @@ const geistMono = Geist_Mono({
 
 // 메타데이터 설정: SEO 및 브라우저 탭에 표시되는 정보
 export const metadata: Metadata = {
-  title: "BooQuest - 부업 시작의 모든 것",
-  description: "인스타그램 부업부터 다양한 수익 창출 방법까지, 부업 시작을 도와드립니다.",
+  title: "릴스탬프 - 100만 조회수 터지는 릴스 제작하기",
+  description: "100만뷰 이상 성공 릴스 분석을 바탕으로 릴스 기획·대본을 제공합니다. 인기 급상승 릴스 랭킹과 제작 가이드를 확인하세요.",
+  icons: {
+    icon: '/images/logo.ico',
+  },
 };
 
 // 루트 레이아웃: 헤더 + 메인 콘텐츠 구조
@@ -53,6 +56,9 @@ export default function RootLayout({
         {gaMeasurementId && (
           <GoogleAnalytics gaId={gaMeasurementId} />
         )}
+
+        {/* Instagram Embed Script */}
+        <script async src="//www.instagram.com/embed.js"></script>
       </body>
     </html>
   );

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Paperclip, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Paperclip, X, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import Image from 'next/image';
 import Modal from '@/app/components/ui/Modal';
 import LoadingOverlay from '@/app/components/ui/LoadingOverlay';
@@ -14,11 +14,12 @@ export default function ReelsRequestPage() {
   const [content, setContent] = useState('');
   const [videoFiles, setVideoFiles] = useState<File[]>([]);
   const [videoPreviewUrls, setVideoPreviewUrls] = useState<string[]>([]);
-  const [videoDurations, setVideoDurations] = useState<number[]>([]); // 각 파일의 길이 저장
   const [instagramId, setInstagramId] = useState('');
   const [isAdditionalOpen, setIsAdditionalOpen] = useState(false);
   const [videoLength, setVideoLength] = useState('');
   const [additionalContent, setAdditionalContent] = useState('');
+  const [agreedToPrivacyPolicy, setAgreedToPrivacyPolicy] = useState(false);
+  const [isPrivacyPolicyOpen, setIsPrivacyPolicyOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewScrollRef = useRef<HTMLDivElement>(null);
 
@@ -37,12 +38,11 @@ export default function ReelsRequestPage() {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | undefined>(undefined);
+  const [loadingText, setLoadingText] = useState('신청 중...');
 
-  // 영상 길이 제한: 25분 (1500초)
-  const MAX_VIDEO_DURATION = 25 * 60; // 25분 = 1500초
-
-  // 파일 선택 핸들러: 여러 파일의 총 영상 길이 검증 (기존 파일 유지하며 추가)
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 파일 선택 핸들러: 여러 파일 선택 가능 (기존 파일 유지하며 추가)
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newFiles = Array.from(e.target.files || []);
     setFileError(null);
 
@@ -58,54 +58,13 @@ export default function ReelsRequestPage() {
     }
 
     try {
-      // 새로 선택한 파일들의 영상 길이 확인
-      const newDurationPromises = newFiles.map((file) => {
-        return new Promise<{ file: File; duration: number }>((resolve, reject) => {
-          const video = document.createElement('video');
-          video.preload = 'metadata';
-          
-          video.onloadedmetadata = () => {
-            const duration = video.duration;
-            window.URL.revokeObjectURL(video.src);
-            resolve({ file, duration });
-          };
-          
-          video.onerror = () => {
-            window.URL.revokeObjectURL(video.src);
-            reject(new Error(`파일 "${file.name}"을 읽을 수 없습니다.`));
-          };
-          
-          video.src = URL.createObjectURL(file);
-        });
-      });
-
-      const newResults = await Promise.all(newDurationPromises);
-      
-      // 총 영상 길이 계산 (기존 파일들의 길이 + 새로 선택한 파일들의 길이)
-      const existingTotal = videoDurations.reduce((sum, duration) => sum + duration, 0);
-      const newTotal = newResults.reduce((sum, result) => sum + result.duration, 0);
-      const totalDuration = existingTotal + newTotal;
-
-      if (totalDuration > MAX_VIDEO_DURATION) {
-        const minutes = Math.floor(totalDuration / 60);
-        const seconds = Math.floor(totalDuration % 60);
-        setFileError(`총 영상 길이가 너무 깁니다. (최대 25분, 현재: ${minutes}분 ${seconds}초)`);
-        // 파일 입력 초기화 (기존 파일은 유지)
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
-        return;
-      }
-
-      // 검증 통과 - 기존 파일에 새 파일 추가
-      const allFiles = [...videoFiles, ...newResults.map((r) => r.file)];
-      const newPreviewUrls = newResults.map((result) => URL.createObjectURL(result.file));
+      // 기존 파일에 새 파일 추가 (제한 없음)
+      const allFiles = [...videoFiles, ...newFiles];
+      const newPreviewUrls = newFiles.map((file) => URL.createObjectURL(file));
       const allPreviewUrls = [...videoPreviewUrls, ...newPreviewUrls];
-      const allDurations = [...videoDurations, ...newResults.map((r) => r.duration)];
       
       setVideoFiles(allFiles);
       setVideoPreviewUrls(allPreviewUrls);
-      setVideoDurations(allDurations);
       
       // 파일 입력 업데이트 (모든 파일 포함)
       if (fileInputRef.current) {
@@ -114,8 +73,8 @@ export default function ReelsRequestPage() {
         fileInputRef.current.files = dataTransfer.files;
       }
     } catch (error) {
-      console.error('영상 길이 확인 실패:', error);
-      setFileError(error instanceof Error ? error.message : '영상 파일을 확인할 수 없습니다. 다른 파일을 선택해주세요.');
+      console.error('파일 처리 실패:', error);
+      setFileError('파일을 처리하는 중 오류가 발생했습니다. 다시 시도해주세요.');
       // 파일 입력 초기화 (기존 파일은 유지)
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -135,8 +94,15 @@ export default function ReelsRequestPage() {
       const uploadedFiles: Array<{ fileName: string; fileUrl: string }> = [];
       
       if (videoFiles.length > 0) {
+        setLoadingText('파일 업로드 중...');
+        const totalFiles = videoFiles.length;
+        let uploadedBytes = 0;
+        let totalBytes = videoFiles.reduce((sum, file) => sum + file.size, 0);
+        
         // 각 파일에 대해 presigned URL 생성 및 업로드
-        for (const file of videoFiles) {
+        for (let i = 0; i < videoFiles.length; i++) {
+          const file = videoFiles[i];
+          
           // 1. Presigned URL 생성 요청
           const urlResponse = await fetch('/api/reels-request/upload-url', {
             method: 'POST',
@@ -168,18 +134,36 @@ export default function ReelsRequestPage() {
             throw new Error(urlData.error?.message || '업로드 URL 생성에 실패했습니다.');
           }
 
-          // 2. Presigned URL로 파일 직접 업로드
-          const uploadResponse = await fetch(urlData.data.uploadUrl, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': file.type,
-            },
-            body: file,
+          // 2. Presigned URL로 파일 직접 업로드 (XMLHttpRequest로 진행률 추적)
+          await new Promise<void>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            
+            xhr.upload.addEventListener('progress', (e) => {
+              if (e.lengthComputable) {
+                // 현재 파일까지 업로드된 바이트 + 현재 파일의 업로드 진행률
+                const currentFileProgress = (e.loaded / e.total) * file.size;
+                const totalProgress = ((uploadedBytes + currentFileProgress) / totalBytes) * 100;
+                setUploadProgress(Math.min(totalProgress, 100));
+              }
+            });
+            
+            xhr.addEventListener('load', () => {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                uploadedBytes += file.size;
+                resolve();
+              } else {
+                reject(new Error(`파일 업로드에 실패했습니다: ${file.name} (${xhr.status})`));
+              }
+            });
+            
+            xhr.addEventListener('error', () => {
+              reject(new Error(`파일 업로드 중 오류가 발생했습니다: ${file.name}`));
+            });
+            
+            xhr.open('PUT', urlData.data.uploadUrl);
+            xhr.setRequestHeader('Content-Type', file.type);
+            xhr.send(file);
           });
-
-          if (!uploadResponse.ok) {
-            throw new Error(`파일 업로드에 실패했습니다: ${file.name}`);
-          }
 
           // 3. 읽기용 presigned URL 저장 (원래 코드와 동일)
           uploadedFiles.push({
@@ -187,6 +171,17 @@ export default function ReelsRequestPage() {
             fileUrl: urlData.data.readUrl, // 읽기용 presigned URL (1년 유효)
           });
         }
+        
+        // 파일 업로드 완료 후 진행률 초기화 및 텍스트 변경
+        setUploadProgress(undefined);
+        setLoadingText('신청 중...');
+      }
+
+      // 개인정보 동의 확인
+      if (!agreedToPrivacyPolicy) {
+        setSubmitError('개인정보 수집 및 이용에 동의해주세요.');
+        setIsSubmitting(false);
+        return;
       }
 
       // 4. 폼 데이터 전송 (파일 URL 포함)
@@ -197,6 +192,7 @@ export default function ReelsRequestPage() {
         additionalContent: additionalContent || null,
         videoLength: videoLength || null,
         files: uploadedFiles,
+        agreedToPrivacyPolicy,
       };
 
       // API 엔드포인트 호출
@@ -224,10 +220,10 @@ export default function ReelsRequestPage() {
       videoPreviewUrls.forEach((url) => URL.revokeObjectURL(url));
       setVideoFiles([]);
       setVideoPreviewUrls([]);
-      setVideoDurations([]);
       setInstagramId('');
       setVideoLength('');
       setAdditionalContent('');
+      setAgreedToPrivacyPolicy(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -239,6 +235,8 @@ export default function ReelsRequestPage() {
       setSubmitError(error instanceof Error ? error.message : '신청 처리 중 오류가 발생했습니다.');
     } finally {
       setIsSubmitting(false);
+      setUploadProgress(undefined);
+      setLoadingText('신청 중...');
     }
   };
 
@@ -321,8 +319,8 @@ export default function ReelsRequestPage() {
               >
                 <span className="text-xs text-gray-500">
                   {videoFiles.length > 0 
-                    ? `${videoFiles.length}개 파일 선택됨 (총 영상 길이 25분 이내)`
-                    : '여러 영상 파일 선택 가능 (총 영상 길이 25분 이내)'}
+                    ? `${videoFiles.length}개 파일 선택됨`
+                    : '여러 영상 파일 선택 가능'}
                 </span>
                 <Paperclip className="w-5 h-5 text-gray-400" />
               </div>
@@ -387,14 +385,12 @@ export default function ReelsRequestPage() {
                                 // 해당 파일 제거
                                 const newFiles = videoFiles.filter((_, i) => i !== index);
                                 const newUrls = videoPreviewUrls.filter((_, i) => i !== index);
-                                const newDurations = videoDurations.filter((_, i) => i !== index);
                                 
                                 // 제거된 파일의 URL 정리
                                 URL.revokeObjectURL(videoPreviewUrls[index]);
                                 
                                 setVideoFiles(newFiles);
                                 setVideoPreviewUrls(newUrls);
-                                setVideoDurations(newDurations);
                                 
                                 // 파일 입력도 업데이트 (DataTransfer 사용)
                                 if (fileInputRef.current) {
@@ -550,6 +546,61 @@ export default function ReelsRequestPage() {
           선정 여부는 기재된 인스타그램 계정으로 24시간 내 안내드립니다.
           </p>
 
+          {/* 개인정보 수집 및 이용 동의 */}
+          <div className="pt-2 pb-2">
+            <div className="space-y-3">
+              {/* 헤더: 체크박스 + 제목 + 펼치기 아이콘 */}
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="privacy-policy-checkbox"
+                  checked={agreedToPrivacyPolicy}
+                  onChange={(e) => setAgreedToPrivacyPolicy(e.target.checked)}
+                  className="w-4 h-4 text-[#EB48B1] border-gray-300 rounded focus:ring-2 focus:ring-[#EB48B1] focus:ring-offset-0 cursor-pointer"
+                  required
+                />
+                <div className="flex-1 flex items-center justify-between">
+                  <label 
+                    htmlFor="privacy-policy-checkbox"
+                    className="text-sm font-medium text-gray-900 cursor-pointer"
+                  >
+                    개인정보 수집 및 이용에 동의합니다 <span className="text-red-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsPrivacyPolicyOpen(!isPrivacyPolicyOpen)}
+                    className="p-1 hover:bg-gray-100 rounded transition-colors"
+                    aria-label={isPrivacyPolicyOpen ? '접기' : '펼치기'}
+                  >
+                    <ChevronDown
+                      className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${
+                        isPrivacyPolicyOpen ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* 상세 내용 (접기/펼치기) */}
+              <AnimatePresence>
+                {isPrivacyPolicyOpen && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2, ease: 'easeInOut' }}
+                    className="overflow-hidden pl-7"
+                  >
+                    <div className="text-xs text-gray-600 leading-relaxed">
+                      <p>이벤트 참여자 확인 및 결과물 전달을 위해 개인정보를 수집·이용합니다.</p>
+                      <p className="mt-0.5">이벤트 종료 및 결과물 전달 완료 후 즉시 파기됩니다.</p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+
           {/* 에러 메시지 */}
           {submitError && (
             <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -572,7 +623,7 @@ export default function ReelsRequestPage() {
       </div>
 
       {/* 로딩 오버레이 */}
-      <LoadingOverlay isVisible={isSubmitting} />
+      <LoadingOverlay isVisible={isSubmitting} text={loadingText} progress={uploadProgress} />
 
       {/* 신청 완료 모달 */}
       <Modal

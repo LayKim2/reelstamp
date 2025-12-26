@@ -14,6 +14,7 @@ export async function POST(request: NextRequest) {
     const instagramId = body.instagramId as string;
     const additionalContent = body.additionalContent as string | null;
     const videoLength = body.videoLength as string | null;
+    const agreedToPrivacyPolicy = body.agreedToPrivacyPolicy as boolean;
     // 업로드된 파일 정보 (이미 GCS에 업로드됨)
     const files = body.files as Array<{ fileName: string; fileUrl: string }> || [];
 
@@ -24,6 +25,20 @@ export async function POST(request: NextRequest) {
           error: {
             message: '필수 필드가 누락되었습니다.',
             code: 'MISSING_REQUIRED_FIELDS',
+          },
+        },
+        { status: 400 }
+      );
+    }
+
+    // 개인정보 동의 확인
+    if (!agreedToPrivacyPolicy) {
+      return NextResponse.json<ApiResponse>(
+        {
+          success: false,
+          error: {
+            message: '개인정보 수집 및 이용에 동의해주세요.',
+            code: 'PRIVACY_POLICY_NOT_AGREED',
           },
         },
         { status: 400 }

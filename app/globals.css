@@ -23,3 +23,35 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Instagram Embed 스타일: 영상만 보이게 하기 */
+.instagram-embed-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.instagram-embed-container iframe {
+  display: block;
+  border: none;
+}
+
+/* Instagram embed 내부 요소 숨기기 */
+.instagram-embed-container .instagram-media p {
+  display: none !important;
+}
+
+.instagram-embed-container .instagram-media > div > a > div:first-child {
+  display: none !important;
+}
+
+.instagram-embed-container .instagram-media > div > a > div:nth-child(2) {
+  display: none !important;
+}
+
+.instagram-embed-container .instagram-media > div > a > div:nth-child(3) {
+  display: none !important;
+}
+
+.instagram-embed-container .instagram-media > div > a > div:last-child {
+  display: none !important;
+}

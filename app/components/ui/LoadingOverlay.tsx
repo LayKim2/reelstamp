@@ -6,9 +6,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface LoadingOverlayProps {
   isVisible: boolean;
   text?: string;
+  progress?: number; // 0-100 사이의 진행률
 }
 
-export default function LoadingOverlay({ isVisible, text = '신청 중...' }: LoadingOverlayProps) {
+export default function LoadingOverlay({ isVisible, text = '신청 중...', progress }: LoadingOverlayProps) {
   return (
     <AnimatePresence>
       {isVisible && (
@@ -51,8 +52,13 @@ export default function LoadingOverlay({ isVisible, text = '신청 중...' }: Lo
                 />
               </div>
               
-              {/* 텍스트 */}
-              <p className="text-sm font-medium text-gray-700">{text}</p>
+              {/* 텍스트 및 진행률 */}
+              <div className="flex flex-col items-center gap-2">
+                <p className="text-sm font-medium text-gray-700">{text}</p>
+                {progress !== undefined && (
+                  <p className="text-xs font-semibold text-gray-600">{Math.round(progress)}%</p>
+                )}
+              </div>
             </motion.div>
           </div>
         </>

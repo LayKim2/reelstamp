@@ -8,6 +8,7 @@ export interface ReelsRequestFormData {
   videoLength?: string;
   additionalContent?: string;
   videoFile?: File;
+  agreedToPrivacyPolicy: boolean; // 개인정보 수집 및 이용 동의
 }
 
 // API 요청 타입
@@ -19,6 +20,7 @@ export interface ReelsRequestPayload {
   videoLength?: string;
   fileName?: string;
   fileUrl?: string;
+  agreedToPrivacyPolicy: boolean; // 개인정보 수집 및 이용 동의
 }
 
 // API 응답 타입
