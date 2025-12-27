@@ -6,12 +6,14 @@ import { useEffect, useRef, useState } from 'react';
 interface InstagramEmbedProps {
   url: string; // Instagram 릴스 URL
   className?: string; // 추가 CSS 클래스
+  onLoadComplete?: () => void; // 로딩 완료 콜백
 }
 
-export default function InstagramEmbed({ url, className = '' }: InstagramEmbedProps) {
+export default function InstagramEmbed({ url, className = '', onLoadComplete }: InstagramEmbedProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
+  const embedWrapperRef = useRef<HTMLDivElement>(null);
 
   // 클라이언트에서만 마운트 (Hydration 에러 방지)
   useEffect(() => {
@@ -31,83 +33,87 @@ export default function InstagramEmbed({ url, className = '' }: InstagramEmbedPr
           const iframe = containerRef.current?.querySelector('iframe');
           const blockquote = containerRef.current?.querySelector('.instagram-media');
           
-          if (iframe) {
-            // iframe의 높이를 컨테이너 높이에 맞게 설정
+          // iframe 스타일 적용
+          if (iframe && iframe.src && iframe.src.includes('instagram.com')) {
             const containerHeight = containerRef.current?.offsetHeight || 0;
             if (containerHeight > 0) {
               iframe.style.height = `${containerHeight}px`;
             }
             iframe.style.maxHeight = '100%';
+            iframe.style.width = '100%';
             iframe.style.borderRadius = '8px';
             iframe.style.overflow = 'hidden';
             iframe.style.display = 'block';
+            iframe.style.position = 'relative';
+            iframe.style.zIndex = '1';
           }
           
-          // blockquote 내부 요소 숨기기
+          // blockquote 내부 요소 숨기기 (CSS로 대부분 처리되므로 최소한만)
           if (blockquote) {
-            // 하단 링크 영역 숨기기
+            // p 태그 숨기기
             const linkParagraph = blockquote.querySelector('p');
             if (linkParagraph) {
               (linkParagraph as HTMLElement).style.display = 'none';
             }
-            
-            // 상단 프로필 영역 숨기기
-            const profileDiv = blockquote.querySelector('div > a > div:first-child');
-            if (profileDiv) {
-              (profileDiv as HTMLElement).style.display = 'none';
-            }
-            
-            // 하단 여백 제거
-            const lastDiv = blockquote.querySelector('div > a > div:last-child');
-            if (lastDiv) {
-              (lastDiv as HTMLElement).style.display = 'none';
-            }
-            
-            // "이 게시물 보기" 텍스트 숨기기
-            const viewMoreDiv = blockquote.querySelector('div > a > div:nth-child(3)');
-            if (viewMoreDiv) {
-              (viewMoreDiv as HTMLElement).style.display = 'none';
-            }
-            
-            // Instagram 아이콘 숨기기
-            const iconDiv = blockquote.querySelector('div > a > div:nth-child(2)');
-            if (iconDiv) {
-              (iconDiv as HTMLElement).style.display = 'none';
-            }
-            
-            // 모든 div 요소 중 하단에 있는 것들 숨기기
-            const allDivs = blockquote.querySelectorAll('div');
-            allDivs.forEach((div, index) => {
-              // 하단 부분의 div들 숨기기 (마지막 몇 개)
-              if (index >= allDivs.length - 3) {
-                (div as HTMLElement).style.display = 'none';
-              }
-            });
           }
           
-          // iframe 내부의 하단 요소들도 숨기기 시도
-          if (iframe && iframe.contentDocument) {
-            try {
-              const iframeBody = iframe.contentDocument.body;
-              if (iframeBody) {
-                // 하단 영역의 요소들 숨기기
-                const bottomElements = iframeBody.querySelectorAll('[class*="view"], [class*="like"], [class*="comment"]');
-                bottomElements.forEach((el) => {
-                  (el as HTMLElement).style.display = 'none';
-                });
-              }
-            } catch (e) {
-              // cross-origin 에러 무시
-            }
-          }
-          
-          setIsLoading(false);
         };
         
-        // 여러 번 시도 (iframe이 완전히 로드될 때까지)
-        setTimeout(applyStyles, 2000);
-        setTimeout(applyStyles, 3000);
-        setTimeout(applyStyles, 4000);
+        // iframe이 로드될 때까지 주기적으로 체크
+        let iframeLoaded = false;
+        const checkInterval = setInterval(() => {
+          const iframe = containerRef.current?.querySelector('iframe');
+          
+          // iframe이 로드되었는지 확인
+          if (iframe && iframe.src && iframe.src.includes('instagram.com') && !iframeLoaded) {
+            iframeLoaded = true;
+            clearInterval(checkInterval);
+            
+            // iframe 로드 이벤트 리스너 추가
+            iframe.addEventListener('load', () => {
+              // 영상이 실제로 로드되었는지 주기적으로 체크
+              let checkCount = 0;
+              const maxChecks = 25; // 최대 5초간 체크 (200ms * 25)
+              
+              const checkVideoLoaded = setInterval(() => {
+                checkCount++;
+                const playSpan = containerRef.current?.querySelector('span[aria-label="Play"]');
+                const embedVideo = containerRef.current?.querySelector('.EmbedVideo');
+                const embedDiv = containerRef.current?.querySelector('.Embed');
+                const videoElement = containerRef.current?.querySelector('video');
+                
+                // 영상이 로드되었는지 확인
+                if (playSpan || embedVideo || embedDiv || videoElement) {
+                  clearInterval(checkVideoLoaded);
+                  setIsLoading(false);
+                  if (onLoadComplete) {
+                    onLoadComplete();
+                  }
+                } else if (checkCount >= maxChecks) {
+                  // 타임아웃: 강제로 로딩 완료
+                  clearInterval(checkVideoLoaded);
+                  setIsLoading(false);
+                  if (onLoadComplete) {
+                    onLoadComplete();
+                  }
+                }
+              }, 200);
+            }, { once: true });
+          }
+          
+          // 스타일 적용
+          applyStyles();
+        }, 200);
+        
+        // 타임아웃: 10초 후 강제로 로딩 완료
+        setTimeout(() => {
+          clearInterval(checkInterval);
+          setIsLoading(false);
+          if (onLoadComplete) {
+            onLoadComplete();
+          }
+        }, 10000);
+        
         return true;
       }
       return false;
@@ -125,15 +131,18 @@ export default function InstagramEmbed({ url, className = '' }: InstagramEmbedPr
       }
     }, 100);
 
-    // 5초 후 타임아웃
-    const timeout = setTimeout(() => {
+    // 최종 타임아웃: 스크립트가 로드되지 않아도 일정 시간 후 표시
+    const finalTimeout = setTimeout(() => {
       clearInterval(checkInterval);
       setIsLoading(false);
+      if (onLoadComplete) {
+        onLoadComplete();
+      }
     }, 5000);
 
     return () => {
       clearInterval(checkInterval);
-      clearTimeout(timeout);
+      clearTimeout(finalTimeout);
     };
   }, [url, isMounted]);
 
@@ -141,8 +150,11 @@ export default function InstagramEmbed({ url, className = '' }: InstagramEmbedPr
   if (!isMounted) {
     return (
       <div className={`instagram-embed-container ${className}`}>
-        <div className="flex items-center justify-center bg-gray-100 rounded-lg aspect-[9/16] min-h-[400px]">
-          <div className="text-gray-400 text-sm">로딩 중...</div>
+        <div className="flex items-center justify-center bg-gradient-to-br from-gray-100 via-gray-50 to-gray-100 rounded-lg aspect-[9/16] min-h-[400px] animate-pulse">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-12 h-12 border-4 border-pink-200 border-t-pink-500 rounded-full animate-spin"></div>
+            <div className="text-gray-400 text-sm font-medium">로딩 중...</div>
+          </div>
         </div>
       </div>
     );
@@ -155,32 +167,21 @@ export default function InstagramEmbed({ url, className = '' }: InstagramEmbedPr
       style={{
         overflow: 'hidden',
         borderRadius: '8px',
-        aspectRatio: '9/16', // 릴스 비율 유지
         position: 'relative',
         height: '100%',
         width: '100%',
         maxHeight: '100%',
-        display: 'flex',
-        flexDirection: 'column',
       }}
     >
-      {isLoading && (
-        <div className="flex items-center justify-center bg-gray-100 rounded-lg aspect-[9/16] min-h-[400px]">
-          <div className="text-gray-400 text-sm">로딩 중...</div>
-        </div>
-      )}
       <div
+        ref={embedWrapperRef}
         style={{
-          transform: 'translateY(-100px)', // 상단 프로필 영역 숨기기
-          marginBottom: '-250px', // 하단 영역 더 많이 숨기기
-          height: '100%', // 컨테이너 높이에 맞춤
-          clipPath: 'inset(0 0 150px 0)', // 하단 150px 잘라내기
           position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
           width: '100%',
-          maxHeight: '100%',
+          height: '100%',
           overflow: 'hidden',
         }}
       >
@@ -198,6 +199,8 @@ export default function InstagramEmbed({ url, className = '' }: InstagramEmbedPr
             minWidth: '326px',
             padding: '0',
             width: '99.375%',
+            height: '100%',
+            overflow: 'hidden',
           }}
         >
         <div style={{ padding: '16px' }}>
@@ -314,7 +317,7 @@ export default function InstagramEmbed({ url, className = '' }: InstagramEmbedPr
             </a>
           </p>
         </div>
-      </blockquote>
+        </blockquote>
       </div>
     </div>
   );

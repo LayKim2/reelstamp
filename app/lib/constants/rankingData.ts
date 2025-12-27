@@ -15,47 +15,42 @@ export const TREND_RANKING_DATA: RankingItem[] = [
   {
     rank: 1,
     instagramUrl: INSTAGRAM_REELS[0],
-    title: '',
+    title: '여덟 번째 릴스탬퍼, 빵빵이의 일상 🍞✨ 매일매일 새로운 도전을 하는 빵빵이를 응원해주세요!',
     instagramId: 'IDazzeogo',
     views: '1.7M',
     category: 'trend',
-    subHashtags: ['#댄스 챌린지', '#상황극', '#패러디', '#음악'],
   },
   {
     rank: 2,
     instagramUrl: INSTAGRAM_REELS[1],
-    title: '',
+    title: '일곱 번째 릴스탬퍼, 키크니의 하루 🌟 인스타툰 작가는 저대학 선배랑!',
     instagramId: 'IDazzeogo',
     views: '1.7M',
     category: 'trend',
-    subHashtags: ['#댄스 챌린지', '#상황극', '#패러디', '#음악'],
   },
   {
     rank: 3,
     instagramUrl: INSTAGRAM_REELS[2],
-    title: '',
+    title: '성공 크리에이터 100명 모으기 프로젝트 🎯 함께 성장하는 우리의 이야기',
     instagramId: 'IDazzeogo',
     views: '1.7M',
     category: 'trend',
-    subHashtags: ['#댄스 챌린지', '#상황극', '#패러디', '#음악'],
   },
   {
     rank: 4,
     instagramUrl: INSTAGRAM_REELS[3],
-    title: '',
+    title: '트렌디한 일상 공유 💫 오늘도 화이팅!',
     instagramId: 'IDazzeogo',
     views: '1.7M',
     category: 'trend',
-    subHashtags: ['#댄스 챌린지', '#상황극', '#패러디', '#음악'],
   },
   {
     rank: 5,
     instagramUrl: INSTAGRAM_REELS[4],
-    title: '',
+    title: '일상의 소소한 행복을 기록하는 중 📸',
     instagramId: 'IDazzeogo',
     views: '1.7M',
     category: 'trend',
-    subHashtags: ['#댄스 챌린지', '#상황극', '#패러디', '#음악'],
   },
 ];
 
@@ -68,7 +63,6 @@ export const KNOWLEDGE_RANKING_DATA: RankingItem[] = [
     instagramId: 'knowledge_user1',
     views: '950K',
     category: 'knowledge',
-    subHashtags: ['#팁', '#정보', '#노하우'],
   },
   {
     rank: 2,
@@ -77,7 +71,6 @@ export const KNOWLEDGE_RANKING_DATA: RankingItem[] = [
     instagramId: 'knowledge_user2',
     views: '820K',
     category: 'knowledge',
-    subHashtags: ['#팁', '#정보', '#노하우'],
   },
   {
     rank: 3,
@@ -86,7 +79,6 @@ export const KNOWLEDGE_RANKING_DATA: RankingItem[] = [
     instagramId: 'knowledge_user3',
     views: '750K',
     category: 'knowledge',
-    subHashtags: ['#팁', '#정보', '#노하우'],
   },
   {
     rank: 4,
@@ -95,7 +87,6 @@ export const KNOWLEDGE_RANKING_DATA: RankingItem[] = [
     instagramId: 'knowledge_user4',
     views: '680K',
     category: 'knowledge',
-    subHashtags: ['#팁', '#정보', '#노하우'],
   },
   {
     rank: 5,
@@ -104,7 +95,6 @@ export const KNOWLEDGE_RANKING_DATA: RankingItem[] = [
     instagramId: 'knowledge_user5',
     views: '590K',
     category: 'knowledge',
-    subHashtags: ['#팁', '#정보', '#노하우'],
   },
 ];
 
@@ -116,7 +106,6 @@ export const REVIEW_RANKING_DATA: RankingItem[] = [
     instagramId: 'review_user1',
     views: '1.5M',
     category: 'review',
-    subHashtags: ['#리뷰', '#추천', '#후기'],
   },
   {
     rank: 2,
@@ -125,7 +114,6 @@ export const REVIEW_RANKING_DATA: RankingItem[] = [
     instagramId: 'review_user2',
     views: '1.3M',
     category: 'review',
-    subHashtags: ['#리뷰', '#추천', '#후기'],
   },
   {
     rank: 3,
@@ -134,7 +122,6 @@ export const REVIEW_RANKING_DATA: RankingItem[] = [
     instagramId: 'review_user3',
     views: '1.1M',
     category: 'review',
-    subHashtags: ['#리뷰', '#추천', '#후기'],
   },
   {
     rank: 4,
@@ -143,7 +130,6 @@ export const REVIEW_RANKING_DATA: RankingItem[] = [
     instagramId: 'review_user4',
     views: '990K',
     category: 'review',
-    subHashtags: ['#리뷰', '#추천', '#후기'],
   },
   {
     rank: 5,
@@ -152,7 +138,6 @@ export const REVIEW_RANKING_DATA: RankingItem[] = [
     instagramId: 'review_user5',
     views: '880K',
     category: 'review',
-    subHashtags: ['#리뷰', '#추천', '#후기'],
   },
 ];
 

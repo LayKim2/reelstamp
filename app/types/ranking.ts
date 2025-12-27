@@ -10,12 +10,6 @@ export const CATEGORY_NAMES: Record<Category, string> = {
   review: '#리뷰·추천',
 };
 
-// 서브 해시태그 타입
-export interface SubHashtag {
-  text: string;
-  category: Category;
-}
-
 // 랭킹 아이템 타입
 export interface RankingItem {
   rank: number; // 순위 (1-5)
@@ -24,7 +18,6 @@ export interface RankingItem {
   instagramId: string; // 인스타그램 ID
   views: string; // 조회수 (예: "1.7M", "52K")
   category: Category; // 카테고리
-  subHashtags?: string[]; // 서브 해시태그 배열 (선택)
 }
 
 // TODAY'S REELSTAMPER 아이템 타입

@@ -15,16 +15,16 @@
 }
 
 html {
-  background: #ffffff;
+  background: linear-gradient(to bottom right, rgba(253, 244, 255, 0.2), white, rgba(255, 237, 213, 0.2));
 }
 
 body {
-  background: #ffffff;
+  background: linear-gradient(to bottom right, rgba(253, 244, 255, 0.2), white, rgba(255, 237, 213, 0.2));
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Instagram Embed 스타일: 영상만 보이게 하기 */
+/* Instagram Embed 스타일 */
 .instagram-embed-container {
   position: relative;
   overflow: hidden;
@@ -35,23 +35,21 @@ body {
   border: none;
 }
 
-/* Instagram embed 내부 요소 숨기기 */
-.instagram-embed-container .instagram-media p {
+/* Instagram "이 게시물 보기" 텍스트 숨기기 */
+.instagram-media p,
+.instagram-media a[href*="instagram.com"]:not([href*="/reel/"]):not([href*="/p/"]),
+.instagram-media div > a[target="_blank"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Instagram 하단 링크 영역 숨기기 */
+.instagram-media > div:last-child,
+.instagram-media > div > a:last-child {
   display: none !important;
 }
 
-.instagram-embed-container .instagram-media > div > a > div:first-child {
-  display: none !important;
-}
-
-.instagram-embed-container .instagram-media > div > a > div:nth-child(2) {
-  display: none !important;
-}
-
-.instagram-embed-container .instagram-media > div > a > div:nth-child(3) {
-  display: none !important;
-}
-
-.instagram-embed-container .instagram-media > div > a > div:last-child {
-  display: none !important;
-}

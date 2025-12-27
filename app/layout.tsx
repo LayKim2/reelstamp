@@ -37,16 +37,16 @@ export default function RootLayout({
   const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
   return (
-    <html lang="ko" className="bg-white">
+    <html lang="ko" className="bg-gradient-to-br from-pink-50/20 via-white to-orange-50/20">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col bg-white`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col bg-gradient-to-br from-pink-50/20 via-white to-orange-50/20`}
       >
         {/* 공통 헤더 */}
         <Header />
         
         {/* 메인 콘텐츠 영역 */}
         <main className="flex-1">
-          {children}
+        {children}
         </main>
 
         {/* 공통 푸터 */}

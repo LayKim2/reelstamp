@@ -11,17 +11,6 @@ export default function Footer() {
         {/* 모바일: 상단 - 로고와 소셜 미디어 같은 줄 */}
         <div className="flex md:hidden justify-between items-center mb-1 pt-2">
           {/* 왼쪽: 브랜드 로고 */}
-          {/* 기존 링크 코드 (주석 처리)
-          <Link href="/" className="flex items-center">
-            <Image
-              src="/images/logo.png"
-              alt="BooQuest"
-              width={150}
-              height={65}
-              className="h-[65px] w-auto"
-            />
-          </Link>
-          */}
           <div className="transform translate-x-[20%] -my-2">
             <div className="flex items-center">
               <Image
@@ -79,17 +68,7 @@ export default function Footer() {
         {/* 데스크톱: 기존 구조 유지 */}
         <div className="hidden md:flex justify-between items-center gap-4">
           {/* 왼쪽: 브랜드 로고 */}
-          {/* 기존 링크 코드 (주석 처리)
-          <Link href="/" className="flex items-center gap-3">
-            <Image
-              src="/images/logo.png"
-              alt="BooQuest"
-              width={160}
-              height={70}
-              className="h-[70px] w-auto"
-            />
-          </Link>
-          */}
+          
           <div>
             <div className="flex items-center gap-3">
               <Image

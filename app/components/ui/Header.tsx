@@ -51,24 +51,12 @@ export default function Header() {
       <div className="w-full pl-4 pr-4 sm:px-8 lg:px-12">
         <div className="flex items-center justify-between h-18">
           {/* 좌측: 브랜드 로고 */}
-          {/* 기존 링크 코드 (주석 처리)
-          <Link 
-            href="/" 
-            className="flex items-center gap-2"
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            <Image
-              src="/images/logo.png"
-              alt="BooQuest"
-              width={220}
-              height={100}
-              className="h-[90px] w-auto"
-              priority
-            />
-          </Link>
-          */}
           <div className="flex items-center">
-            <div className="flex items-center gap-2">
+            <Link 
+              href="/" 
+              className="flex items-center gap-2"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
               <Image
                 src="/images/logo.png"
                 alt="BooQuest"
@@ -77,23 +65,23 @@ export default function Header() {
                 className="h-[90px] w-auto"
                 priority
               />
-            </div>
+            </Link>
           </div>
 
           {/* 중앙: 메뉴 영역 (PC) */}
-          {/* <nav className="hidden md:flex items-center gap-8">
+          <nav className="hidden md:flex items-center gap-8">
             <Link
               href="/ranking"
               className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
             >
               인기 급상승 릴스
             </Link>
-          </nav> */}
+          </nav>
 
           {/* 우측: 가입/로그인 버튼 및 모바일 메뉴 */}
           <div className="flex items-center gap-3">
             {/* 모바일 햄버거 메뉴 버튼 */}
-            {/* <button
+            <button
               type="button"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="md:hidden p-1.5 rounded-lg bg-gradient-to-r from-[#EB48B1] to-[#F59A39] hover:from-[#D93D9F] hover:to-[#E6892F] transition-all shadow-sm hover:shadow-md"
@@ -119,21 +107,21 @@ export default function Header() {
                   transition={{ duration: 0.2 }}
                 />
               </div>
-            </button> */}
+            </button>
             {/* 로그인/회원가입 버튼 (PC만 표시) */}
-            {/* <button
+            <button
               type="button"
               onClick={() => setShowComingSoonModal(true)}
               className="hidden md:block px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-[#EB48B1] to-[#F59A39] rounded-lg hover:from-[#D93D9F] hover:to-[#E6892F] transition-all shadow-md hover:shadow-lg"
             >
               로그인/회원가입
-            </button> */}
+            </button>
           </div>
         </div>
       </div>
 
       {/* 모바일 메뉴 (전체 화면) - Portal로 body에 직접 렌더링 */}
-      {/* {mounted && createPortal(
+      {mounted && createPortal(
         <AnimatePresence>
           {isMobileMenuOpen && (
             <motion.div
@@ -166,7 +154,7 @@ export default function Header() {
           )}
         </AnimatePresence>,
         document.body
-      )} */}
+      )}
 
       {/* 서비스 준비중 모달 */}
       <Modal
