@@ -147,12 +147,10 @@ export default function RankingPage() {
 
                 {/* 하단 정보 영역 - shrink-0로 고정 */}
                 <div className="shrink-0 px-4 pt-3 pb-4 bg-gradient-to-b from-white via-gray-50/50 to-gray-50/30 flex flex-col gap-3 border-t border-gray-200/50">
-                  {/* 제목 */}
-                  {item.title && (
-                    <p className="text-sm text-gray-800 leading-relaxed line-clamp-1 font-medium">
-                      {item.title}
-                    </p>
-                  )}
+                  {/* 제목 - 항상 한 줄 공간 차지 */}
+                  <p className="text-sm text-gray-800 leading-relaxed line-clamp-1 font-medium min-h-[1.5rem]">
+                    {item.title || '\u00A0'}
+                  </p>
 
                   {/* Instagram 버튼 */}
                   <a
@@ -202,12 +200,10 @@ export default function RankingPage() {
 
                 {/* 하단 정보 영역 - shrink-0로 고정 */}
                 <div className="shrink-0 p-4 bg-gradient-to-b from-white via-gray-50/50 to-gray-50/30 flex flex-col gap-3 border-t border-gray-200/50">
-                  {/* 제목 */}
-                  {item.title && (
-                    <p className="text-sm text-gray-800 leading-relaxed line-clamp-1 font-medium">
-                      {item.title}
-                    </p>
-                  )}
+                  {/* 제목 - 항상 한 줄 공간 차지 */}
+                  <p className="text-sm text-gray-800 leading-relaxed line-clamp-1 font-medium min-h-[1.5rem]">
+                    {item.title || '\u00A0'}
+                  </p>
 
                   {/* Instagram 버튼 */}
                   <a
