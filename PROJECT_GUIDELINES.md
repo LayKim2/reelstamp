@@ -403,6 +403,34 @@ export function useUsers() {
 }
 ```
 
+#### Supabase 데이터 페칭 필수 규칙
+- **항상 Hook으로 구현**: Supabase에서 데이터를 가져올 때는 반드시 `app/hooks/`에 커스텀 Hook을 만들어서 `useQuery`와 함께 사용
+- **useQuery 필수 사용**: `useState`와 `useEffect`로 직접 구현하지 않고, React Query의 `useQuery`를 사용하여 서버 상태 관리
+- **staleTime 설정 필수**: 모든 Supabase 쿼리에는 적절한 `staleTime`을 설정하여 캐싱 최적화
+  - 기본값: `staleTime: 5 * 60 * 1000` (5분)
+  - 데이터 특성에 따라 조정 가능 (예: 자주 변경되는 데이터는 짧게, 거의 변경되지 않는 데이터는 길게)
+- **쿼리 키 명확히 지정**: `queryKey`에 의미 있는 키를 지정하여 캐시 관리 (예: `['ranking', category]`)
+
+```typescript
+// ✅ 올바른 예시
+// app/hooks/useRankingData.ts
+export function useRankingData(category: Category) {
+  return useQuery({
+    queryKey: ['ranking', category],
+    queryFn: () => fetchRankingData(category),
+    staleTime: 5 * 60 * 1000, // 필수: 캐싱 최적화
+  });
+}
+
+// ❌ 잘못된 예시 - 직접 useState/useEffect 사용
+export default function RankingPage() {
+  const [data, setData] = useState([]);
+  useEffect(() => {
+    supabase.from('reels_exports').select('*').then(...);
+  }, []);
+}
+```
+
 #### 쿼리 작성 규칙
 - **에러 처리**: 항상 `error` 체크 후 처리
 - **타입 안정성**: TypeScript 타입 활용 (Supabase 타입 자동 생성)

@@ -18,7 +18,7 @@ export default function Home() {
               </p>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 leading-tight mb-8">
                 나만의 컨텐츠 조수, 릴스탬프
-              </h1>
+          </h1>
               <p className="text-base sm:text-lg text-gray-900 leading-relaxed mb-3">
                 1분만에 완성하는 릴스 영상 기획과 대본
               </p>

@@ -1,23 +1,20 @@
-// 랭킹 페이지: 릴스 랭킹 서비스
+// 랭킹 페이지: 릴스 랭킹 서비스 - Supabase에서 실시간 랭킹 데이터를 가져와 표시
 'use client';
 
-import { useState, useEffect } from 'react';
-import { RankingItem, Category, CATEGORY_NAMES } from '@/app/types/ranking';
-import { RANKING_DATA_BY_CATEGORY } from '@/app/lib/constants/rankingData';
+import { useState } from 'react';
+import { Category, CATEGORY_NAMES } from '@/app/types/ranking';
+import { useRankingData } from '@/app/hooks/useRankingData';
 import InstagramEmbed from '@/app/components/ui/InstagramEmbed';
-import { Crown, Eye, Instagram } from 'lucide-react';
+import { Crown, Eye, Instagram, Loader2 } from 'lucide-react';
 
 type TabType = 'trend' | 'creator';
 
 export default function RankingPage() {
   const [activeTab, setActiveTab] = useState<TabType>('trend');
   const [selectedCategory, setSelectedCategory] = useState<Category>('trend');
-  const [rankingData, setRankingData] = useState<RankingItem[]>(RANKING_DATA_BY_CATEGORY.trend);
-
-  // 카테고리 변경 시 랭킹 데이터 업데이트
-  useEffect(() => {
-    setRankingData(RANKING_DATA_BY_CATEGORY[selectedCategory]);
-  }, [selectedCategory]);
+  
+  // Supabase에서 랭킹 데이터 가져오기
+  const { data: rankingData = [], isLoading, error } = useRankingData(selectedCategory);
 
   // 랭킹 배지 스타일 함수 (이미지 기준: 1위 핑크/로즈골드, 2위 실버, 3위 브론즈, 4-5위 다크 그레이)
   const getRankBadgeStyle = (rank: number) => {
@@ -95,8 +92,32 @@ export default function RankingPage() {
             })}
           </div>
 
+          {/* 로딩 상태 */}
+          {isLoading && (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="w-8 h-8 animate-spin text-pink-500" />
+              <span className="ml-3 text-gray-600">랭킹 데이터를 불러오는 중...</span>
+            </div>
+          )}
+
+          {/* 에러 상태 */}
+          {error && (
+            <div className="px-4 sm:px-6 lg:px-8 py-12 text-center">
+              <p className="text-red-500 mb-2">랭킹 데이터를 불러오는 중 오류가 발생했습니다.</p>
+              <p className="text-sm text-gray-500">잠시 후 다시 시도해주세요.</p>
+            </div>
+          )}
+
+          {/* 데이터가 없을 때 */}
+          {!isLoading && !error && rankingData.length === 0 && (
+            <div className="px-4 sm:px-6 lg:px-8 py-12 text-center">
+              <p className="text-gray-500">아직 랭킹 데이터가 없습니다.</p>
+            </div>
+          )}
+
           {/* 모바일: 기존 세로 패널 레이아웃 */}
-          <div className="md:hidden grid grid-cols-1 gap-4">
+          {!isLoading && !error && rankingData.length > 0 && (
+            <div className="md:hidden grid grid-cols-1 gap-4">
             {rankingData.map((item) => (
               <div
                 key={item.rank}
@@ -147,9 +168,11 @@ export default function RankingPage() {
               </div>
             ))}
           </div>
+          )}
 
           {/* PC: 전체 너비 카드 레이아웃 */}
-          <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-6 w-full px-4 sm:px-6 lg:px-8">
+          {!isLoading && !error && rankingData.length > 0 && (
+            <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-6 w-full px-4 sm:px-6 lg:px-8">
             {rankingData.map((item) => (
               <div
                 key={item.rank}
@@ -200,6 +223,7 @@ export default function RankingPage() {
               </div>
             ))}
           </div>
+          )}
           </div>
 
           <div className={activeTab === 'creator' ? 'block' : 'hidden'}>

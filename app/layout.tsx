@@ -6,6 +6,7 @@ import { GoogleAnalytics } from "@next/third-parties/google";
 import "./globals.css";
 import Header from "@/app/components/ui/Header";
 import Footer from "@/app/components/ui/Footer";
+import QueryProvider from "@/app/providers/QueryProvider";
 
 // Geist Sans 폰트 설정: 기본 sans-serif 폰트
 const geistSans = Geist({
@@ -41,16 +42,18 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col bg-gradient-to-br from-pink-50/20 via-white to-orange-50/20`}
       >
-        {/* 공통 헤더 */}
-        <Header />
-        
-        {/* 메인 콘텐츠 영역 */}
-        <main className="flex-1">
-        {children}
-        </main>
+        <QueryProvider>
+          {/* 공통 헤더 */}
+          <Header />
+          
+          {/* 메인 콘텐츠 영역 */}
+          <main className="flex-1">
+          {children}
+          </main>
 
-        {/* 공통 푸터 */}
-        <Footer />
+          {/* 공통 푸터 */}
+          <Footer />
+        </QueryProvider>
 
         {/* Google Analytics 4 */}
         {gaMeasurementId && (
