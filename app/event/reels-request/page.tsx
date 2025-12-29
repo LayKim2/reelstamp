@@ -544,6 +544,10 @@ export default function ReelsRequestPage() {
           {/* 안내 문구 */}
           <p className="text-sm text-gray-900 leading-relaxed">
           선정 여부는 기재된 인스타그램 계정으로 24시간 내 안내드립니다.
+          <br />
+          비공개 계정은 선정에서 제외되며,
+          <br />
+          선정 이후, 일정 기간 내 회신이 없을 경우 당첨이 취소될 수 있습니다.
           </p>
 
           {/* 개인정보 수집 및 이용 동의 */}
@@ -603,7 +607,7 @@ export default function ReelsRequestPage() {
                         </p>
                         <p className="flex items-start gap-2">
                           <span className="text-gray-400 mt-0.5">•</span>
-                          <span>이벤트를 통해 완성된 결과물은 릴스탬프의 홍보 및 마케팅을 위해 활용될 수 있습니다.</span>
+                          <span>서비스 개선 및 마케팅 활용: 설문 응답 내용 및 생성 대본은 개인을 식별할 수 없는 형태로 마케팅 자료, 콘텐츠 제작, 서비스 개선을 위해 활용될 수 있습니다.</span>
                         </p>
                       </div>
                     </div>
