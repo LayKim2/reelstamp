@@ -14,8 +14,22 @@ export default function RankingPage() {
   const [activeTab, setActiveTab] = useState<TabType>('trend');
   const [selectedCategory, setSelectedCategory] = useState<Category>('trend');
   
-  // Supabase에서 랭킹 데이터 가져오기
-  const { data: rankingData = [], isLoading, error } = useRankingData(selectedCategory);
+  // 모든 카테고리의 데이터를 미리 가져오기 (DOM 유지를 위해)
+  const { data: trendData = [], isLoading: trendLoading, error: trendError } = useRankingData('trend');
+  const { data: knowledgeData = [], isLoading: knowledgeLoading, error: knowledgeError } = useRankingData('knowledge');
+  const { data: reviewData = [], isLoading: reviewLoading, error: reviewError } = useRankingData('review');
+
+  // 선택된 카테고리에 맞는 데이터와 로딩/에러 상태 가져오기
+  const getCategoryData = (category: Category) => {
+    switch (category) {
+      case 'trend':
+        return { data: trendData, isLoading: trendLoading, error: trendError };
+      case 'knowledge':
+        return { data: knowledgeData, isLoading: knowledgeLoading, error: knowledgeError };
+      case 'review':
+        return { data: reviewData, isLoading: reviewLoading, error: reviewError };
+    }
+  };
 
   // 랭킹 배지 스타일 함수 (이미지 기준: 1위 핑크/로즈골드, 2위 실버, 3위 브론즈, 4-5위 다크 그레이)
   const getRankBadgeStyle = (rank: number) => {
@@ -35,6 +49,104 @@ export default function RankingPage() {
   const getRankText = (rank: number) => {
     return `${rank}위`;
   };
+
+  // 카드 렌더링 함수 (모바일)
+  const renderMobileCard = (item: any, category: Category) => (
+    <div
+      key={`${category}-${item.rank}`}
+      className="bg-white rounded-2xl shadow-md border border-gray-200 hover:shadow-2xl hover:scale-[1.02] hover:border-gray-300 transition-all duration-300 ease-out relative h-[580px] overflow-hidden flex flex-col cursor-pointer"
+    >
+      {/* 랭킹 배지 */}
+      <div
+        className={`absolute top-18 left-5 z-10 px-4 py-2 rounded-full text-sm font-bold flex items-center gap-1.5 shadow-md ${getRankBadgeStyle(
+          item.rank
+        )}`}
+      >
+        {(item.rank === 1 || item.rank === 2 || item.rank === 3) && <Crown className="w-4 h-4" />}
+        {getRankText(item.rank)}
+      </div>
+
+      {/* 비디오 영역 - flex-1 min-h-0으로 남은 공간 차지 */}
+      <div className="flex-1 min-h-0 overflow-hidden relative">
+        <div className="absolute inset-0 w-full h-full overflow-hidden">
+          <InstagramEmbed url={item.instagramUrl} className="w-full h-full" />
+        </div>
+        {/* 조회수 - 영상 오른쪽 아래 */}
+        <div className="absolute bottom-4 right-4 z-20 flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-black/70 via-black/60 to-black/50 backdrop-blur-md rounded-xl shadow-lg border border-white/10">
+          <Eye className="w-4 h-4 text-white" />
+          <span className="text-sm font-bold text-white tracking-tight">{item.views}</span>
+        </div>
+      </div>
+
+      {/* 하단 정보 영역 - shrink-0로 고정 */}
+      <div className="shrink-0 px-4 pt-3 pb-4 bg-gradient-to-b from-white via-gray-50/50 to-gray-50/30 flex flex-col gap-3 border-t border-gray-200/50">
+        {/* 제목 - 항상 한 줄 공간 차지 */}
+        <p className="text-sm text-gray-800 leading-relaxed line-clamp-1 font-medium min-h-[1.5rem]">
+          {item.title || '\u00A0'}
+        </p>
+
+        {/* Instagram 버튼 */}
+        <a
+          href={item.instagramUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#EB48B1] to-[#F59A39] text-white text-sm font-semibold rounded-lg hover:from-[#D93D9F] hover:to-[#E6892F] transition-all shadow-sm hover:shadow-md"
+        >
+          <Instagram className="w-4 h-4" />
+          <span>Instagram</span>
+        </a>
+      </div>
+    </div>
+  );
+
+  // 카드 렌더링 함수 (PC)
+  const renderPCCard = (item: any, category: Category) => (
+    <div
+      key={`${category}-${item.rank}`}
+      className="bg-white rounded-2xl shadow-md border border-gray-200 hover:shadow-2xl hover:scale-[1.02] hover:border-gray-300 transition-all duration-300 ease-out relative h-[650px] overflow-hidden flex flex-col cursor-pointer"
+    >
+      {/* 랭킹 배지 */}
+      <div
+        className={`absolute top-18 left-5 z-10 px-4 py-2 rounded-full text-sm font-bold flex items-center gap-1.5 shadow-md ${getRankBadgeStyle(
+          item.rank
+        )}`}
+      >
+        {(item.rank === 1 || item.rank === 2 || item.rank === 3) && <Crown className="w-4 h-4" />}
+        {getRankText(item.rank)}
+      </div>
+
+      {/* 비디오 영역 - flex-1 min-h-0으로 남은 공간 차지 */}
+      <div className="flex-1 min-h-0 overflow-hidden relative">
+        <div className="absolute inset-0 w-full h-full overflow-hidden">
+          <InstagramEmbed url={item.instagramUrl} className="w-full h-full" />
+        </div>
+        {/* 조회수 - 영상 오른쪽 아래 */}
+        <div className="absolute bottom-4 right-4 z-20 flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-black/70 via-black/60 to-black/50 backdrop-blur-md rounded-xl shadow-lg border border-white/10">
+          <Eye className="w-4 h-4 text-white" />
+          <span className="text-sm font-bold text-white tracking-tight">{item.views}</span>
+        </div>
+      </div>
+
+      {/* 하단 정보 영역 - shrink-0로 고정 */}
+      <div className="shrink-0 p-4 bg-gradient-to-b from-white via-gray-50/50 to-gray-50/30 flex flex-col gap-3 border-t border-gray-200/50">
+        {/* 제목 - 항상 한 줄 공간 차지 */}
+        <p className="text-sm text-gray-800 leading-relaxed line-clamp-1 font-medium min-h-[1.5rem]">
+          {item.title || '\u00A0'}
+        </p>
+
+        {/* Instagram 버튼 */}
+        <a
+          href={item.instagramUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#EB48B1] to-[#F59A39] text-white text-sm font-semibold rounded-lg hover:from-[#D93D9F] hover:to-[#E6892F] transition-all shadow-sm hover:shadow-md"
+        >
+          <Instagram className="w-4 h-4" />
+          <span>Instagram</span>
+        </a>
+      </div>
+    </div>
+  );
 
 
   return (
@@ -93,134 +205,55 @@ export default function RankingPage() {
             })}
           </div>
 
-          {/* 로딩 상태 */}
-          {isLoading && (
-            <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-8 h-8 animate-spin text-pink-500" />
-              <span className="ml-3 text-gray-600">랭킹 데이터를 불러오는 중...</span>
-            </div>
-          )}
+          {/* 각 카테고리별로 DOM 유지 (display로 토글) */}
+          {(['trend', 'knowledge', 'review'] as Category[]).map((category) => {
+            const { data: categoryData = [], isLoading: categoryLoading, error: categoryError } = getCategoryData(category);
+            const isSelected = selectedCategory === category;
 
-          {/* 에러 상태 */}
-          {error && (
-            <div className="px-4 sm:px-6 lg:px-8 py-12 text-center">
-              <p className="text-red-500 mb-2">랭킹 데이터를 불러오는 중 오류가 발생했습니다.</p>
-              <p className="text-sm text-gray-500">잠시 후 다시 시도해주세요.</p>
-            </div>
-          )}
-
-          {/* 데이터가 없을 때 */}
-          {!isLoading && !error && rankingData.length === 0 && (
-            <div className="px-4 sm:px-6 lg:px-8 py-12 text-center">
-              <p className="text-gray-500">아직 랭킹 데이터가 없습니다.</p>
-            </div>
-          )}
-
-          {/* 모바일: 기존 세로 패널 레이아웃 */}
-          {!isLoading && !error && rankingData.length > 0 && (
-            <div className="md:hidden grid grid-cols-1 gap-4">
-            {rankingData.map((item) => (
+            return (
               <div
-                key={item.rank}
-                className="bg-white rounded-2xl shadow-md border border-gray-200 hover:shadow-2xl hover:scale-[1.02] hover:border-gray-300 transition-all duration-300 ease-out relative h-[580px] overflow-hidden flex flex-col cursor-pointer"
+                key={category}
+                className={isSelected ? 'block' : 'hidden'}
               >
-                {/* 랭킹 배지 */}
-                <div
-                  className={`absolute top-18 left-5 z-10 px-4 py-2 rounded-full text-sm font-bold flex items-center gap-1.5 shadow-md ${getRankBadgeStyle(
-                    item.rank
-                  )}`}
-                >
-                  {(item.rank === 1 || item.rank === 2 || item.rank === 3) && <Crown className="w-4 h-4" />}
-                  {getRankText(item.rank)}
-                </div>
-
-                {/* 비디오 영역 - flex-1 min-h-0으로 남은 공간 차지 */}
-                <div className="flex-1 min-h-0 overflow-hidden relative">
-                  <div className="absolute inset-0 w-full h-full overflow-hidden">
-                    <InstagramEmbed url={item.instagramUrl} className="w-full h-full" />
+                {/* 로딩 상태 */}
+                {categoryLoading && (
+                  <div className="flex items-center justify-center py-20">
+                    <Loader2 className="w-8 h-8 animate-spin text-pink-500" />
+                    <span className="ml-3 text-gray-600">랭킹 데이터를 불러오는 중...</span>
                   </div>
-                  {/* 조회수 - 영상 오른쪽 아래 */}
-                  <div className="absolute bottom-4 right-4 z-20 flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-black/70 via-black/60 to-black/50 backdrop-blur-md rounded-xl shadow-lg border border-white/10">
-                    <Eye className="w-4 h-4 text-white" />
-                    <span className="text-sm font-bold text-white tracking-tight">{item.views}</span>
+                )}
+
+                {/* 에러 상태 */}
+                {categoryError && (
+                  <div className="px-4 sm:px-6 lg:px-8 py-12 text-center">
+                    <p className="text-red-500 mb-2">랭킹 데이터를 불러오는 중 오류가 발생했습니다.</p>
+                    <p className="text-sm text-gray-500">잠시 후 다시 시도해주세요.</p>
                   </div>
-                </div>
+                )}
 
-                {/* 하단 정보 영역 - shrink-0로 고정 */}
-                <div className="shrink-0 px-4 pt-3 pb-4 bg-gradient-to-b from-white via-gray-50/50 to-gray-50/30 flex flex-col gap-3 border-t border-gray-200/50">
-                  {/* 제목 - 항상 한 줄 공간 차지 */}
-                  <p className="text-sm text-gray-800 leading-relaxed line-clamp-1 font-medium min-h-[1.5rem]">
-                    {item.title || '\u00A0'}
-                  </p>
+                {/* 데이터가 없을 때 */}
+                {!categoryLoading && !categoryError && categoryData.length === 0 && (
+                  <div className="px-4 sm:px-6 lg:px-8 py-12 text-center">
+                    <p className="text-gray-500">아직 랭킹 데이터가 없습니다.</p>
+                  </div>
+                )}
 
-                  {/* Instagram 버튼 */}
-                  <a
-                    href={item.instagramUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#EB48B1] to-[#F59A39] text-white text-sm font-semibold rounded-lg hover:from-[#D93D9F] hover:to-[#E6892F] transition-all shadow-sm hover:shadow-md"
-                  >
-                    <Instagram className="w-4 h-4" />
-                    <span>Instagram</span>
-                  </a>
-                </div>
+                {/* 모바일: 기존 세로 패널 레이아웃 */}
+                {!categoryLoading && !categoryError && categoryData.length > 0 && (
+                  <div className="md:hidden grid grid-cols-1 gap-4">
+                    {categoryData.map((item) => renderMobileCard(item, category))}
+                  </div>
+                )}
+
+                {/* PC: 전체 너비 카드 레이아웃 */}
+                {!categoryLoading && !categoryError && categoryData.length > 0 && (
+                  <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-6 w-full px-4 sm:px-6 lg:px-8">
+                    {categoryData.map((item) => renderPCCard(item, category))}
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
-          )}
-
-          {/* PC: 전체 너비 카드 레이아웃 */}
-          {!isLoading && !error && rankingData.length > 0 && (
-            <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-6 w-full px-4 sm:px-6 lg:px-8">
-            {rankingData.map((item) => (
-              <div
-                key={item.rank}
-                className="bg-white rounded-2xl shadow-md border border-gray-200 hover:shadow-2xl hover:scale-[1.02] hover:border-gray-300 transition-all duration-300 ease-out relative h-[650px] overflow-hidden flex flex-col cursor-pointer"
-              >
-                {/* 랭킹 배지 */}
-                <div
-                  className={`absolute top-18 left-5 z-10 px-4 py-2 rounded-full text-sm font-bold flex items-center gap-1.5 shadow-md ${getRankBadgeStyle(
-                    item.rank
-                  )}`}
-                >
-                  {(item.rank === 1 || item.rank === 2 || item.rank === 3) && <Crown className="w-4 h-4" />}
-                  {getRankText(item.rank)}
-                </div>
-
-                {/* 비디오 영역 - flex-1 min-h-0으로 남은 공간 차지 */}
-                <div className="flex-1 min-h-0 overflow-hidden relative">
-                  <div className="absolute inset-0 w-full h-full overflow-hidden">
-                    <InstagramEmbed url={item.instagramUrl} className="w-full h-full" />
-                  </div>
-                  {/* 조회수 - 영상 오른쪽 아래 */}
-                  <div className="absolute bottom-4 right-4 z-20 flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-black/70 via-black/60 to-black/50 backdrop-blur-md rounded-xl shadow-lg border border-white/10">
-                    <Eye className="w-4 h-4 text-white" />
-                    <span className="text-sm font-bold text-white tracking-tight">{item.views}</span>
-                  </div>
-                </div>
-
-                {/* 하단 정보 영역 - shrink-0로 고정 */}
-                <div className="shrink-0 p-4 bg-gradient-to-b from-white via-gray-50/50 to-gray-50/30 flex flex-col gap-3 border-t border-gray-200/50">
-                  {/* 제목 - 항상 한 줄 공간 차지 */}
-                  <p className="text-sm text-gray-800 leading-relaxed line-clamp-1 font-medium min-h-[1.5rem]">
-                    {item.title || '\u00A0'}
-                  </p>
-
-                  {/* Instagram 버튼 */}
-                  <a
-                    href={item.instagramUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#EB48B1] to-[#F59A39] text-white text-sm font-semibold rounded-lg hover:from-[#D93D9F] hover:to-[#E6892F] transition-all shadow-sm hover:shadow-md"
-                  >
-                    <Instagram className="w-4 h-4" />
-                    <span>Instagram</span>
-                  </a>
-                </div>
-              </div>
-            ))}
-          </div>
-          )}
+            );
+          })}
           </div>
 
           <div className={activeTab === 'creator' ? 'block' : 'hidden'}>
