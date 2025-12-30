@@ -6,6 +6,7 @@ import { Category, CATEGORY_NAMES } from '@/app/types/ranking';
 import { useRankingData } from '@/app/hooks/useRankingData';
 import InstagramEmbed from '@/app/components/ui/InstagramEmbed';
 import { Crown, Eye, Instagram, Loader2 } from 'lucide-react';
+import TodayCreatorSection from '@/app/components/features/TodayCreatorSection';
 
 type TabType = 'trend' | 'creator';
 
@@ -223,7 +224,42 @@ export default function RankingPage() {
           </div>
 
           <div className={activeTab === 'creator' ? 'block' : 'hidden'}>
-            <div className="px-4 sm:px-6 lg:px-8">
+            {/* PC 버전: 오늘의 크리에이터 레이아웃 */}
+            <TodayCreatorSection
+              analysisReel={{
+                url: 'https://www.instagram.com/p/DSPhk8CEd7V/',
+                title: '뚝딱이형',
+                instagramId: '1mincook',
+                views: '1.7M',
+                followers: '1.2M',
+              }}
+              topVideos={[
+                {
+                  url: 'https://www.instagram.com/p/DSPhk8CEd7V/',
+                  views: '972.8만',
+                  title: '제목 어쩌고 저쩌고',
+                  instagramId: 'IDazzeogo',
+                  viewCount: '1.7M',
+                },
+                {
+                  url: 'https://www.instagram.com/p/DSPhk8CEd7V/',
+                  views: '972.8만',
+                  title: '제목 어쩌고 저쩌고',
+                  instagramId: 'IDazzeogo',
+                  viewCount: '1.7M',
+                },
+                {
+                  url: 'https://www.instagram.com/p/DSPhk8CEd7V/',
+                  views: '972.8만',
+                  title: '제목 어쩌고 저쩌고',
+                  instagramId: 'IDazzeogo',
+                  viewCount: '1.7M',
+                },
+              ]}
+            />
+
+            {/* 모바일 버전: 임시 메시지 */}
+            <div className="lg:hidden px-4 sm:px-6 lg:px-8">
               <div className="text-center py-12 text-gray-500">
                 <p className="text-lg">오늘의 크리에이터 콘텐츠가 곧 추가됩니다.</p>
               </div>

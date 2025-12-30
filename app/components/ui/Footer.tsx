@@ -116,7 +116,7 @@ export default function Footer() {
                 alt="YouTube"
                 width={32}
                 height={40}
-                className="w-8 h-10" 
+                className="w-8 h-10"
               />
               <span>Youtube</span>
             </a>
