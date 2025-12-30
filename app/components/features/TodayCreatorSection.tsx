@@ -146,11 +146,6 @@ export default function TodayCreatorSection({ analysisReel, topVideos }: TodayCr
                         onTouchStart={handleTouchStart}
                         style={{ touchAction: 'none' }}
                       />
-                      {/* 조회수 - 영상 오른쪽 위 */}
-                      <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-black/70 via-black/60 to-black/50 rounded-xl shadow-lg border border-white/10">
-                        <Eye className="w-3.5 h-3.5 text-white" />
-                        <span className="text-xs font-bold text-white tracking-tight">{video.views}</span>
-                      </div>
                       {/* 하단 오버레이 - embed 하단 부분 가리기 */}
                       <div className="absolute bottom-0 left-0 right-0 h-0 bg-white z-10 pointer-events-none"></div>
                     </div>
@@ -233,11 +228,6 @@ export default function TodayCreatorSection({ analysisReel, topVideos }: TodayCr
                           className="w-full h-full" 
                         />
                       </div>
-                    </div>
-                    {/* 조회수 - 영상 오른쪽 위 */}
-                    <div className="absolute top-4 right-4 z-20 flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-black/70 via-black/60 to-black/50 rounded-xl shadow-lg border border-white/10">
-                      <Eye className="w-4 h-4 text-white" />
-                      <span className="text-sm font-bold text-white tracking-tight">{video.views}</span>
                     </div>
                     {/* 하단 오버레이 - embed 하단 부분 가리기 */}
                     <div className="absolute bottom-0 left-0 right-0 h-0 bg-white z-10 pointer-events-none"></div>

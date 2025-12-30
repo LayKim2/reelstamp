@@ -8,7 +8,6 @@ import "./globals.css";
 import Header from "@/app/components/ui/Header";
 import Footer from "@/app/components/ui/Footer";
 import QueryProvider from "@/app/providers/QueryProvider";
-import InstagramScriptLoader from "@/app/components/ui/InstagramScriptLoader";
 
 // Geist Sans 폰트 설정: 기본 sans-serif 폰트
 const geistSans = Geist({
@@ -69,14 +68,8 @@ export default function RootLayout({
           <GoogleAnalytics gaId={gaMeasurementId} />
         )}
 
-        {/* Instagram 스크립트 로드 감지 (클라이언트 컴포넌트) */}
-        <InstagramScriptLoader />
-
         {/* Instagram Embed Script - beforeInteractive로 빠른 로딩 */}
-        <Script
-          src="//www.instagram.com/embed.js"
-          strategy="beforeInteractive"
-        />
+        
       </body>
     </html>
   );

@@ -54,108 +54,6 @@ export default function RankingPage() {
     return `${rank}위`;
   };
 
-  // Instagram embed 미리 처리: 페이지 로드 시 모든 URL을 숨겨진 컨테이너에 미리 생성하고 처리
-  // 이벤트 기반으로 스크립트 로드 완료 감지 (setInterval 제거)
-  useEffect(() => {
-    // 모든 카테고리의 URL 수집
-    const allUrls = [
-      ...trendData.map(item => item.instagramUrl),
-      ...(todayCreatorData ? [
-        todayCreatorData.analysisReel.url,
-        ...todayCreatorData.topVideos.map(v => v.url)
-      ] : []),
-      ...knowledgeData.map(item => item.instagramUrl),
-      ...reviewData.map(item => item.instagramUrl),
-      
-    ].filter(Boolean);
-
-    if (allUrls.length === 0) return;
-
-    // Instagram 스크립트가 로드되면 모든 embed 미리 처리
-    const preloadEmbeds = () => {
-      if (typeof window === 'undefined' || !(window as any).instgrm) {
-        return false;
-      }
-
-      // 숨겨진 컨테이너 생성
-      let preloadContainer = document.getElementById('instagram-preload-container');
-      if (!preloadContainer) {
-        preloadContainer = document.createElement('div');
-        preloadContainer.id = 'instagram-preload-container';
-        preloadContainer.style.position = 'absolute';
-        preloadContainer.style.left = '-9999px';
-        preloadContainer.style.top = '-9999px';
-        preloadContainer.style.width = '1px';
-        preloadContainer.style.height = '1px';
-        preloadContainer.style.overflow = 'hidden';
-        preloadContainer.style.visibility = 'hidden';
-        preloadContainer.style.pointerEvents = 'none';
-        document.body.appendChild(preloadContainer);
-      }
-
-      // 모든 URL에 대해 blockquote 생성 (병렬 처리 최적화: DocumentFragment 사용)
-      const fragment = document.createDocumentFragment();
-      const newBlockquotes: HTMLElement[] = [];
-      
-      allUrls.forEach((url) => {
-        const existingBlockquote = preloadContainer?.querySelector(`[data-preload-url="${url}"]`);
-        if (existingBlockquote) return; // 이미 생성됨
-
-        const blockquote = document.createElement('blockquote');
-        blockquote.className = 'instagram-media';
-        blockquote.setAttribute('data-instgrm-permalink', url);
-        blockquote.setAttribute('data-instgrm-version', '14');
-        blockquote.setAttribute('data-preload-url', url);
-        blockquote.style.display = 'none';
-        
-        fragment.appendChild(blockquote);
-        newBlockquotes.push(blockquote);
-      });
-
-      // DocumentFragment를 한 번에 DOM에 추가 (성능 최적화)
-      if (preloadContainer && newBlockquotes.length > 0) {
-        preloadContainer.appendChild(fragment);
-      }
-
-      // Instagram 스크립트로 모든 embed 병렬 처리
-      // Instagram 스크립트가 내부적으로 모든 blockquote를 병렬로 처리합니다
-      if (newBlockquotes.length > 0) {
-        try {
-          (window as any).instgrm.Embeds.process();
-        } catch (error) {
-          // 에러 무시 (이미 처리되었을 수 있음)
-        }
-      }
-
-      return true;
-    };
-
-    // 스크립트가 이미 로드되었으면 즉시 처리
-    if ((window as any).__instagramScriptLoaded || (window as any).instgrm) {
-      preloadEmbeds();
-      return;
-    }
-
-    // 스크립트 로드 이벤트 리스너 (이벤트 기반 - setInterval 제거)
-    const handleScriptLoad = () => {
-      preloadEmbeds();
-    };
-
-    window.addEventListener('instagram-script-loaded', handleScriptLoad);
-
-    // 폴백: 이벤트가 누락될 경우를 대비한 짧은 체크 (1회)
-    const fallbackTimeout = setTimeout(() => {
-      if ((window as any).instgrm) {
-        preloadEmbeds();
-      }
-    }, 500);
-
-    return () => {
-      window.removeEventListener('instagram-script-loaded', handleScriptLoad);
-      clearTimeout(fallbackTimeout);
-    };
-  }, [trendData, knowledgeData, reviewData, todayCreatorData]);
-
   // 카드 렌더링 함수 (모바일)
   const renderMobileCard = (item: any, category: Category) => (
     <div
@@ -175,12 +73,10 @@ export default function RankingPage() {
       {/* 비디오 영역 - flex-1 min-h-0으로 남은 공간 차지 */}
       <div className="flex-1 min-h-0 overflow-hidden relative">
         <div className="absolute inset-0 w-full h-full overflow-hidden">
-          <InstagramEmbed url={item.instagramUrl} className="w-full h-full" />
-        </div>
-        {/* 조회수 - 영상 오른쪽 아래 */}
-        <div className="absolute bottom-4 right-4 z-20 flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-black/70 via-black/60 to-black/50 backdrop-blur-md rounded-xl shadow-lg border border-white/10">
-          <Eye className="w-4 h-4 text-white" />
-          <span className="text-sm font-bold text-white tracking-tight">{item.views}</span>
+          <InstagramEmbed 
+            url={item.instagramUrl} 
+            className="w-full h-full" 
+          />
         </div>
       </div>
 
@@ -224,12 +120,10 @@ export default function RankingPage() {
       {/* 비디오 영역 - flex-1 min-h-0으로 남은 공간 차지 */}
       <div className="flex-1 min-h-0 overflow-hidden relative">
         <div className="absolute inset-0 w-full h-full overflow-hidden">
-          <InstagramEmbed url={item.instagramUrl} className="w-full h-full" />
-        </div>
-        {/* 조회수 - 영상 오른쪽 아래 */}
-        <div className="absolute bottom-4 right-4 z-20 flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-black/70 via-black/60 to-black/50 backdrop-blur-md rounded-xl shadow-lg border border-white/10">
-          <Eye className="w-4 h-4 text-white" />
-          <span className="text-sm font-bold text-white tracking-tight">{item.views}</span>
+          <InstagramEmbed 
+            url={item.instagramUrl} 
+            className="w-full h-full" 
+          />
         </div>
       </div>
 
