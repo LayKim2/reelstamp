@@ -1,10 +1,8 @@
-// 오늘의 크리에이터 섹션 컴포넌트: PC 버전 레이아웃으로 크리에이터 분석 영상과 Top 3 조회수 영상 표시
-// 왼쪽: 내 릴스에 올라간 분석한 크리에이터 설명 영상
-// 오른쪽: 해당 크리에이터의 최대 조회수 Top 3 영상
 'use client';
 
+import { useRef } from 'react';
 import InstagramEmbed from '@/app/components/ui/InstagramEmbed';
-import { User, Eye, TrendingUp } from 'lucide-react';
+import { Eye } from 'lucide-react';
 
 interface TodayCreatorSectionProps {
   // 분석 릴스 영상 정보 (내가 분석한 크리에이터)
@@ -26,95 +24,238 @@ interface TodayCreatorSectionProps {
 }
 
 export default function TodayCreatorSection({ analysisReel, topVideos }: TodayCreatorSectionProps) {
+  // 모바일 가로 스크롤 컨테이너 ref
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // embed 영역에서 터치 이벤트 처리하여 스크롤 제어
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    const startX = touch.clientX;
+    const startY = touch.clientY;
+    const scrollLeft = scrollContainerRef.current?.scrollLeft || 0;
+
+    const handleTouchMove = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      const deltaX = touch.clientX - startX;
+      const deltaY = touch.clientY - startY;
+
+      // 가로 이동이 세로 이동보다 크면 스크롤 처리
+      if (Math.abs(deltaX) > Math.abs(deltaY) && scrollContainerRef.current) {
+        e.preventDefault();
+        scrollContainerRef.current.scrollLeft = scrollLeft - deltaX;
+      }
+    };
+
+    const handleTouchEnd = () => {
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd);
+  };
+
   return (
-    <div className="hidden lg:block py-6">
-      <div className="flex gap-10 w-full px-4 sm:px-6 lg:px-8">
-        {/* 왼쪽: 분석한 크리에이터 설명 카드 (강조) */}
-        <div className="flex-[1.3] min-w-0">
-          <div className="relative">
-            {/* 카드 배경 */}
-            <div className="bg-gradient-to-br from-white via-purple-50/30 to-pink-50/20 rounded-3xl shadow-2xl border-2 border-purple-400/70 hover:shadow-2xl hover:scale-[1.02] hover:border-purple-500/90 transition-all duration-300 ease-out overflow-hidden flex flex-col h-[740px] group cursor-pointer">
-              {/* 그라데이션 오버레이 */}
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/8 via-transparent to-pink-500/5 pointer-events-none z-0"></div>
-              
-              {/* 상단 섹션: 오늘의 크리에이터 정보 */}
-              <div className="px-7 pt-7 pb-5 shrink-0 relative z-10">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-gray-500 mb-1.5">오늘의 크리에이터</p>
-                    <p className="text-2xl font-extrabold text-gray-900 leading-tight truncate">{analysisReel.title}</p>
-                  </div>
-                  {analysisReel.followers && (
-                    <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-100/80 via-pink-100/60 to-purple-100/80 rounded-xl border border-purple-200/50 shadow-sm shrink-0">
-                      <div className="p-1.5 rounded-lg bg-gradient-to-br from-purple-500/10 to-pink-500/10">
-                        <User className="w-4 h-4 text-purple-600" />
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-xs font-medium text-gray-500 leading-tight">팔로워</span>
-                        <span className="text-sm font-bold text-gray-900 leading-tight">{analysisReel.followers}</span>
-                      </div>
+    <>
+      {/* 모바일 버전: 세로 레이아웃 */}
+      <div className="lg:hidden py-6">
+        <div className="w-full px-4 sm:px-6">
+          {/* 메인 크리에이터 소개 영상 카드 */}
+          <div className="mb-8">
+            <div className="relative">
+              <div className="bg-gradient-to-br from-white via-red-50/20 to-red-50/15 rounded-3xl shadow-2xl border-2 border-red-500 overflow-hidden flex flex-col h-[520px] group cursor-pointer hover:border-red-600 transition-all duration-300">
+                {/* 그라데이션 오버레이 */}
+                <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 via-transparent to-red-500/3 pointer-events-none z-0"></div>
+                
+                {/* 상단 섹션: 오늘의 크리에이터 정보 */}
+                <div className="px-5 pt-5 pb-4 shrink-0 relative z-10">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-gray-500 mb-1">오늘의 크리에이터</p>
+                      <p className="text-xl font-extrabold text-gray-900 leading-tight truncate">{analysisReel.title}</p>
                     </div>
-                  )}
+                    {analysisReel.followers && (
+                      <div className="shrink-0 px-3 py-2 bg-white/80 backdrop-blur-sm rounded-lg border border-gray-200/60 shadow-sm">
+                        <div className="text-right">
+                          <p className="text-xs text-gray-500 mb-0.5">팔로워</p>
+                          <p className="text-sm font-bold text-gray-900">{analysisReel.followers}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-              
-              {/* 영상 영역 */}
-              <div className="flex-1 min-h-0 relative overflow-hidden mx-4 mb-7 rounded-2xl shadow-inner border border-purple-200/30">
-                <div className="absolute w-full" style={{ top: '-60px', height: 'calc(100% + 460px)' }}>
-                  <InstagramEmbed 
-                    url={analysisReel.url} 
-                    className="w-full h-full" 
-                  />
+                
+                {/* 영상 영역 */}
+                <div className="flex-1 min-h-0 relative overflow-hidden mx-4 mb-5 rounded-2xl shadow-inner border border-red-300/40">
+                  <div className="absolute w-full" style={{ top: '-60px', height: 'calc(100% + 460px)' }}>
+                    <InstagramEmbed 
+                      url={analysisReel.url} 
+                      className="w-full h-full" 
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* 오른쪽: Top 3 조회수 영상 섹션 */}
-        <div className="flex-[2.7]">
-          {/* 섹션 헤더 */}
+          {/* Top 3 섹션 구분선 및 헤더 */}
           <div className="mb-5">
-            <h3 className="text-lg font-bold text-gray-900 mb-1">조회수 Top 3</h3>
-            <p className="text-sm text-gray-500">이 크리에이터의 인기 영상</p>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
+              <div className="flex flex-col items-center">
+                <h3 className="text-lg font-bold text-gray-900">조회수 Top 3</h3>
+                <p className="text-xs text-gray-500">이 크리에이터의 인기 영상</p>
+              </div>
+              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
+            </div>
           </div>
-          
-          {/* Top 3 영상 그리드 */}
-          <div className="grid grid-cols-3 gap-6">
-            {topVideos.map((video, index) => (
-              <div key={index} className="bg-white rounded-2xl shadow-md border border-gray-200 hover:shadow-2xl hover:scale-[1.02] hover:border-gray-300 transition-all duration-300 ease-out overflow-hidden flex flex-col h-[480px] group cursor-pointer">
-                {/* 영상 영역 */}
-                <div className="flex-1 min-h-0 overflow-hidden relative">
-                  <div className="absolute inset-0 w-full h-full overflow-hidden">
-                    <div className="absolute w-full" style={{ top: '-60px', bottom: '-60px', height: 'calc(100% + 130px)' }}>
-                      <InstagramEmbed 
-                        url={video.url} 
-                        className="w-full h-full" 
+
+          {/* Top 3 영상 가로 스크롤 (peek 효과) */}
+          <div className="overflow-hidden -mx-4 sm:-mx-6 px-4 sm:px-6">
+            <div 
+              ref={scrollContainerRef}
+              className="flex gap-4 overflow-x-auto pb-4 scroll-smooth"
+              style={{ 
+                scrollbarWidth: 'thin',
+                WebkitOverflowScrolling: 'touch', // iOS에서 부드러운 스크롤
+              }}
+            >
+              {topVideos.map((video, index) => (
+                <div 
+                  key={index} 
+                  className="relative flex-shrink-0"
+                  style={{ 
+                    width: '85vw',
+                    maxWidth: '320px',
+                  }}
+                >
+                  <div className="bg-white rounded-2xl shadow-md border border-gray-200 hover:shadow-2xl hover:scale-[1.02] hover:border-gray-300 transition-all duration-300 ease-out overflow-hidden flex flex-col h-[420px] group cursor-pointer">
+                    {/* 영상 영역 */}
+                    <div className="flex-1 min-h-0 overflow-hidden relative">
+                      <div className="absolute inset-0 w-full h-full overflow-hidden">
+                        <div className="absolute w-full" style={{ top: '-60px', bottom: '-60px', height: 'calc(100% + 130px)' }}>
+                          <InstagramEmbed 
+                            url={video.url} 
+                            className="w-full h-full" 
+                          />
+                        </div>
+                      </div>
+                      {/* 투명 터치 레이어 - embed 위에서 터치 이벤트 처리 */}
+                      <div 
+                        className="absolute inset-0 z-30 lg:hidden"
+                        onTouchStart={handleTouchStart}
+                        style={{ touchAction: 'none' }}
                       />
+                      {/* 조회수 - 영상 오른쪽 위 */}
+                      <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-black/70 via-black/60 to-black/50 rounded-xl shadow-lg border border-white/10">
+                        <Eye className="w-3.5 h-3.5 text-white" />
+                        <span className="text-xs font-bold text-white tracking-tight">{video.views}</span>
+                      </div>
+                      {/* 하단 오버레이 - embed 하단 부분 가리기 */}
+                      <div className="absolute bottom-0 left-0 right-0 h-0 bg-white z-10 pointer-events-none"></div>
+                    </div>
+                    
+                    {/* 하단 정보 영역 */}
+                    <div className="shrink-0 p-3 bg-gradient-to-b from-white via-gray-50/50 to-gray-50/30 flex flex-col gap-2 border-t border-gray-200/50">
+                      {/* 제목 - 항상 한 줄 공간 차지 */}
+                      <p className="text-xs text-gray-800 leading-relaxed line-clamp-1 font-medium min-h-[1.25rem]">
+                        {video.title || '\u00A0'}
+                      </p>
                     </div>
                   </div>
-                  {/* 조회수 - 영상 오른쪽 위 */}
-                  <div className="absolute top-4 right-4 z-20 flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-black/70 via-black/60 to-black/50 rounded-xl shadow-lg border border-white/10">
-                    <Eye className="w-4 h-4 text-white" />
-                    <span className="text-sm font-bold text-white tracking-tight">{video.views}</span>
-                  </div>
-                  {/* 하단 오버레이 - embed 하단 부분 가리기 */}
-                  <div className="absolute bottom-0 left-0 right-0 h-0 bg-white z-10 pointer-events-none"></div>
                 </div>
-                
-                {/* 하단 정보 영역 */}
-                <div className="shrink-0 p-4 bg-gradient-to-b from-white via-gray-50/50 to-gray-50/30 flex flex-col gap-3 border-t border-gray-200/50">
-                  {/* 제목 - 항상 한 줄 공간 차지 */}
-                  <p className="text-sm text-gray-800 leading-relaxed line-clamp-1 font-medium min-h-[1.5rem]">
-                    {video.title || '\u00A0'}
-                  </p>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* PC 버전: 가로 레이아웃 */}
+      <div className="hidden lg:block py-6">
+        <div className="flex gap-10 w-full px-4 sm:px-6 lg:px-8">
+          {/* 왼쪽: 분석한 크리에이터 설명 카드 (강조) */}
+          <div className="flex-[1.3] min-w-0">
+            <div className="relative">
+              {/* 카드 배경 */}
+              <div className="bg-gradient-to-br from-white via-red-50/20 to-red-50/15 rounded-3xl shadow-2xl border-2 border-red-500 hover:shadow-2xl hover:scale-[1.02] hover:border-red-600 transition-all duration-300 ease-out overflow-hidden flex flex-col h-[740px] group cursor-pointer">
+                {/* 그라데이션 오버레이 */}
+                <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 via-transparent to-red-500/3 pointer-events-none z-0"></div>
+                
+                {/* 상단 섹션: 오늘의 크리에이터 정보 */}
+                <div className="px-7 pt-7 pb-5 shrink-0 relative z-10">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-gray-500 mb-1.5">오늘의 크리에이터</p>
+                      <p className="text-2xl font-extrabold text-gray-900 leading-tight truncate">{analysisReel.title}</p>
+                    </div>
+                    {analysisReel.followers && (
+                      <div className="shrink-0 px-4 py-2.5 bg-white/80 backdrop-blur-sm rounded-lg border border-gray-200/60 shadow-sm">
+                        <div className="text-right">
+                          <p className="text-xs text-gray-500 mb-0.5">팔로워</p>
+                          <p className="text-sm font-bold text-gray-900">{analysisReel.followers}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* 영상 영역 */}
+                <div className="flex-1 min-h-0 relative overflow-hidden mx-4 mb-7 rounded-2xl shadow-inner border border-red-300/40">
+                  <div className="absolute w-full" style={{ top: '-60px', height: 'calc(100% + 460px)' }}>
+                    <InstagramEmbed 
+                      url={analysisReel.url} 
+                      className="w-full h-full" 
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 오른쪽: Top 3 조회수 영상 섹션 */}
+          <div className="flex-[2.7]">
+            {/* 섹션 헤더 */}
+            <div className="mb-5">
+              <h3 className="text-lg font-bold text-gray-900 mb-1">조회수 Top 3</h3>
+              <p className="text-sm text-gray-500">이 크리에이터의 인기 영상</p>
+            </div>
+            
+            {/* Top 3 영상 그리드 */}
+            <div className="grid grid-cols-3 gap-6">
+              {topVideos.map((video, index) => (
+                <div key={index} className="bg-white rounded-2xl shadow-md border border-gray-200 hover:shadow-2xl hover:scale-[1.02] hover:border-gray-300 transition-all duration-300 ease-out overflow-hidden flex flex-col h-[480px] group cursor-pointer">
+                  {/* 영상 영역 */}
+                  <div className="flex-1 min-h-0 overflow-hidden relative">
+                    <div className="absolute inset-0 w-full h-full overflow-hidden">
+                      <div className="absolute w-full" style={{ top: '-60px', bottom: '-60px', height: 'calc(100% + 130px)' }}>
+                        <InstagramEmbed 
+                          url={video.url} 
+                          className="w-full h-full" 
+                        />
+                      </div>
+                    </div>
+                    {/* 조회수 - 영상 오른쪽 위 */}
+                    <div className="absolute top-4 right-4 z-20 flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-black/70 via-black/60 to-black/50 rounded-xl shadow-lg border border-white/10">
+                      <Eye className="w-4 h-4 text-white" />
+                      <span className="text-sm font-bold text-white tracking-tight">{video.views}</span>
+                    </div>
+                    {/* 하단 오버레이 - embed 하단 부분 가리기 */}
+                    <div className="absolute bottom-0 left-0 right-0 h-0 bg-white z-10 pointer-events-none"></div>
+                  </div>
+                  
+                  {/* 하단 정보 영역 */}
+                  <div className="shrink-0 p-4 bg-gradient-to-b from-white via-gray-50/50 to-gray-50/30 flex flex-col gap-3 border-t border-gray-200/50">
+                    {/* 제목 - 항상 한 줄 공간 차지 */}
+                    <p className="text-sm text-gray-800 leading-relaxed line-clamp-1 font-medium min-h-[1.5rem]">
+                      {video.title || '\u00A0'}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
-

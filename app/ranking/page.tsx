@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { Category, CATEGORY_NAMES } from '@/app/types/ranking';
 import { useRankingData } from '@/app/hooks/useRankingData';
+import { useTodayCreator } from '@/app/hooks/useTodayCreator';
 import InstagramEmbed from '@/app/components/ui/InstagramEmbed';
 import { Crown, Eye, Instagram, Loader2 } from 'lucide-react';
 import TodayCreatorSection from '@/app/components/features/TodayCreatorSection';
@@ -13,6 +14,9 @@ type TabType = 'trend' | 'creator';
 export default function RankingPage() {
   const [activeTab, setActiveTab] = useState<TabType>('trend');
   const [selectedCategory, setSelectedCategory] = useState<Category>('trend');
+  
+  // 오늘의 크리에이터 데이터 페칭
+  const { data: todayCreatorData, isLoading: isTodayCreatorLoading, error: todayCreatorError } = useTodayCreator();
   
   // Supabase에서 랭킹 데이터 가져오기
   const { data: rankingData = [], isLoading, error } = useRankingData(selectedCategory);
@@ -224,46 +228,34 @@ export default function RankingPage() {
           </div>
 
           <div className={activeTab === 'creator' ? 'block' : 'hidden'}>
-            {/* PC 버전: 오늘의 크리에이터 레이아웃 */}
-            <TodayCreatorSection
-              analysisReel={{
-                url: 'https://www.instagram.com/p/DSPhk8CEd7V/',
-                title: '뚝딱이형',
-                instagramId: '1mincook',
-                views: '1.7M',
-                followers: '1.2M',
-              }}
-              topVideos={[
-                {
-                  url: 'https://www.instagram.com/p/DSPhk8CEd7V/',
-                  views: '972.8만',
-                  title: '제목 어쩌고 저쩌고',
-                  instagramId: 'IDazzeogo',
-                  viewCount: '1.7M',
-                },
-                {
-                  url: 'https://www.instagram.com/p/DSPhk8CEd7V/',
-                  views: '972.8만',
-                  title: '제목 어쩌고 저쩌고',
-                  instagramId: 'IDazzeogo',
-                  viewCount: '1.7M',
-                },
-                {
-                  url: 'https://www.instagram.com/p/DSPhk8CEd7V/',
-                  views: '972.8만',
-                  title: '제목 어쩌고 저쩌고',
-                  instagramId: 'IDazzeogo',
-                  viewCount: '1.7M',
-                },
-              ]}
-            />
-
-            {/* 모바일 버전: 임시 메시지 */}
-            <div className="lg:hidden px-4 sm:px-6 lg:px-8">
-              <div className="text-center py-12 text-gray-500">
-                <p className="text-lg">오늘의 크리에이터 콘텐츠가 곧 추가됩니다.</p>
+            {/* 로딩 상태 */}
+            {isTodayCreatorLoading && (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
               </div>
-            </div>
+            )}
+
+            {/* 에러 상태 */}
+            {todayCreatorError && (
+              <div className="px-4 sm:px-6 lg:px-8 py-12 text-center">
+                <p className="text-red-500">오늘의 크리에이터 데이터를 불러오는 중 오류가 발생했습니다.</p>
+              </div>
+            )}
+
+            {/* 데이터 없음 */}
+            {!isTodayCreatorLoading && !todayCreatorError && !todayCreatorData && (
+              <div className="px-4 sm:px-6 lg:px-8 py-12 text-center">
+                <p className="text-gray-500">오늘의 크리에이터 데이터가 없습니다.</p>
+              </div>
+            )}
+
+            {/* 데이터 표시 */}
+            {!isTodayCreatorLoading && !todayCreatorError && todayCreatorData && (
+              <TodayCreatorSection
+                analysisReel={todayCreatorData.analysisReel}
+                topVideos={todayCreatorData.topVideos}
+              />
+            )}
           </div>
         </section>
       </div>
