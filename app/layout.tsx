@@ -48,7 +48,7 @@ export default function RootLayout({
           
           {/* 메인 콘텐츠 영역 */}
           <main className="flex-1">
-          {children}
+        {children}
           </main>
 
           {/* 공통 푸터 */}
