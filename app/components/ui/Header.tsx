@@ -71,6 +71,12 @@ export default function Header() {
           {/* 중앙: 메뉴 영역 (PC) */}
           <nav className="hidden md:flex items-center gap-8">
             <Link
+              href="/contents"
+              className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
+            >
+              콘텐츠 제작
+            </Link>
+            <Link
               href="/ranking"
               className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
             >
@@ -132,6 +138,13 @@ export default function Header() {
               transition={{ duration: 0.2 }}
             >
               <nav className="h-full flex flex-col p-6 space-y-4">
+              <Link
+                  href="/contents"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="px-6 py-4 text-base font-medium text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  콘텐츠 제작
+                </Link>
                 <Link
                   href="/ranking"
                   onClick={() => setIsMobileMenuOpen(false)}
