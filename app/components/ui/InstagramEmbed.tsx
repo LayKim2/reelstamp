@@ -63,6 +63,7 @@ export default function InstagramEmbed({ url, className = '', onLoadComplete }: 
   const [isLoading, setIsLoading] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const embedWrapperRef = useRef<HTMLDivElement>(null);
+  const blockquoteIdRef = useRef<string>(`instagram-embed-${Math.random().toString(36).substr(2, 9)}`);
 
   // 클라이언트에서만 마운트 (Hydration 에러 방지)
   useEffect(() => {
@@ -80,8 +81,8 @@ export default function InstagramEmbed({ url, className = '', onLoadComplete }: 
 
     // Instagram embed script가 로드되었는지 확인하고 처리
     const processEmbed = () => {
-      // blockquote가 DOM에 있는지 확인 (React가 렌더링한 후)
-      const blockquote = containerRef.current?.querySelector('.instagram-media');
+      // 해당 blockquote가 DOM에 있는지 확인 (고유 ID로 정확히 식별)
+      const blockquote = containerRef.current?.querySelector(`#${blockquoteIdRef.current}`);
       if (!blockquote) {
         return false; // 아직 DOM에 없으면 나중에 다시 시도
       }
@@ -94,7 +95,7 @@ export default function InstagramEmbed({ url, className = '', onLoadComplete }: 
       
       if (typeof window !== 'undefined' && (window as any).instgrm) {
         // URL이 변경되었는지 다시 확인
-        const currentBlockquote = containerRef.current?.querySelector('.instagram-media');
+        const currentBlockquote = containerRef.current?.querySelector(`#${blockquoteIdRef.current}`);
         if (!currentBlockquote || currentBlockquote.getAttribute('data-instgrm-permalink') !== currentUrl) {
           return false;
         }
@@ -113,8 +114,12 @@ export default function InstagramEmbed({ url, className = '', onLoadComplete }: 
         
         // iframe이 로드된 후 높이 조정 및 스타일 적용
         const applyStyles = () => {
-          const iframe = containerRef.current?.querySelector('iframe');
-          const blockquote = containerRef.current?.querySelector('.instagram-media');
+          // 해당 blockquote만 정확히 찾기
+          const blockquote = containerRef.current?.querySelector(`#${blockquoteIdRef.current}`);
+          if (!blockquote) return;
+          
+          // 해당 blockquote 내부의 iframe만 찾기 (다른 embed의 iframe과 구분)
+          const iframe = blockquote.querySelector('iframe');
           
           // iframe 스타일 적용
           if (iframe && iframe.src && iframe.src.includes('instagram.com')) {
@@ -132,136 +137,141 @@ export default function InstagramEmbed({ url, className = '', onLoadComplete }: 
           }
           
           // blockquote 내부 요소 숨기기 (CSS로 대부분 처리되므로 최소한만)
-          if (blockquote) {
-            // p 태그 숨기기
-            const linkParagraph = blockquote.querySelector('p');
-            if (linkParagraph) {
-              (linkParagraph as HTMLElement).style.display = 'none';
-            }
+          const linkParagraph = blockquote.querySelector('p');
+          if (linkParagraph) {
+            (linkParagraph as HTMLElement).style.display = 'none';
           }
         };
         
-        // iframe이 로드될 때까지 주기적으로 체크
+        // 각 embed의 iframe이 개별적으로 로드될 때까지 주기적으로 체크
         let iframeLoaded = false;
         const checkInterval = setInterval(() => {
           // URL이 변경되었는지 확인
-          const blockquote = containerRef.current?.querySelector('.instagram-media');
+          const blockquote = containerRef.current?.querySelector(`#${blockquoteIdRef.current}`);
           if (!blockquote || blockquote.getAttribute('data-instgrm-permalink') !== currentUrl) {
             clearInterval(checkInterval);
             return; // URL이 변경되었으면 중단
           }
           
-          const iframe = containerRef.current?.querySelector('iframe');
+          // 해당 blockquote 내부의 iframe만 확인 (다른 embed의 iframe과 구분)
+          const iframe = blockquote.querySelector('iframe');
           
-          // iframe이 로드되었는지 확인
+          // iframe이 생성되고 실제로 로드되었는지 확인
           if (iframe && iframe.src && iframe.src.includes('instagram.com') && !iframeLoaded) {
-            iframeLoaded = true;
-            clearInterval(checkInterval);
-            
-            // iframe 로드 이벤트 리스너 추가
-            iframe.addEventListener('load', () => {
-              // URL이 변경되었는지 확인
-              const currentBlockquote = containerRef.current?.querySelector('.instagram-media');
-              if (!currentBlockquote || currentBlockquote.getAttribute('data-instgrm-permalink') !== currentUrl) {
-                return; // URL이 변경되었으면 처리하지 않음
+            // iframe의 load 이벤트를 기다려서 실제 콘텐츠가 로드될 때까지 대기
+            const handleIframeLoad = () => {
+              iframeLoaded = true;
+              clearInterval(checkInterval);
+              
+              // 스타일 적용
+              applyStyles();
+              
+              // 로딩 완료 처리
+              setIsLoading(false);
+              if (onLoadComplete) {
+                onLoadComplete();
               }
+            };
+            
+            // 이미 로드되었는지 확인
+            if (iframe.contentDocument || iframe.contentWindow) {
+              // 이미 로드된 경우
+              handleIframeLoad();
+            } else {
+              // 로드 이벤트 대기
+              iframe.addEventListener('load', handleIframeLoad, { once: true });
               
-              // 영상이 실제로 로드되었는지 주기적으로 체크
-              let checkCount = 0;
-              const maxChecks = 25; // 최대 5초간 체크 (200ms * 25)
-              
-              const checkVideoLoaded = setInterval(() => {
-                // URL이 변경되었는지 확인
-                const blockquote = containerRef.current?.querySelector('.instagram-media');
-                if (!blockquote || blockquote.getAttribute('data-instgrm-permalink') !== currentUrl) {
-                  clearInterval(checkVideoLoaded);
-                  return; // URL이 변경되었으면 중단
+              // 타임아웃: 2초 후 강제로 로딩 완료 (iframe이 생성되었으므로)
+              setTimeout(() => {
+                if (!iframeLoaded) {
+                  handleIframeLoad();
                 }
-                
-                checkCount++;
-                const playSpan = containerRef.current?.querySelector('span[aria-label="Play"]');
-                const embedVideo = containerRef.current?.querySelector('.EmbedVideo');
-                const embedDiv = containerRef.current?.querySelector('.Embed');
-                const videoElement = containerRef.current?.querySelector('video');
-                
-                // 영상이 로드되었는지 확인
-                if (playSpan || embedVideo || embedDiv || videoElement) {
-                  clearInterval(checkVideoLoaded);
-                  setIsLoading(false);
-                  if (onLoadComplete) {
-                    onLoadComplete();
-                  }
-                } else if (checkCount >= maxChecks) {
-                  // 타임아웃: 강제로 로딩 완료
-                  clearInterval(checkVideoLoaded);
-                  setIsLoading(false);
-                  if (onLoadComplete) {
-                    onLoadComplete();
-                  }
-                }
-              }, 200);
-            }, { once: true });
+              }, 2000);
+            }
           }
           
           // 스타일 적용
           applyStyles();
-        }, 200);
+        }, 100);
         
-        // 타임아웃: 10초 후 강제로 로딩 완료
+        // 타임아웃: 5초 후 강제로 로딩 완료 (10초 -> 5초로 단축)
         setTimeout(() => {
           clearInterval(checkInterval);
           setIsLoading(false);
           if (onLoadComplete) {
             onLoadComplete();
           }
-        }, 10000);
+        }, 5000); // 10000ms -> 5000ms로 단축
         
         return true;
       }
       return false;
     };
 
-    // React가 DOM을 업데이트한 후 처리하기 위해 약간의 지연 추가
-    let checkInterval: NodeJS.Timeout | null = null;
-    let finalTimeout: NodeJS.Timeout | null = null;
-    
-    const timeoutId = setTimeout(() => {
-      // 즉시 처리 시도
+    // 스크립트 로드 후 처리 함수 (이벤트 기반 최적화)
+    const tryProcess = () => {
+      // Instagram embed 직접 처리 시도
       if (processEmbed()) {
-        return;
+        return true;
       }
+      return false;
+    };
 
-      // 스크립트 로드 대기 및 blockquote DOM 추가 대기
-      checkInterval = setInterval(() => {
-        if (processEmbed()) {
-          if (checkInterval) {
-            clearInterval(checkInterval);
-            checkInterval = null;
-          }
-        }
-      }, 100);
+    // 스크립트가 이미 로드되었으면 즉시 처리
+    if ((window as any).__instagramScriptLoaded || (window as any).instgrm) {
+      // 다음 틱에서 처리 (DOM 업데이트 대기)
+      const immediateTimeout = setTimeout(() => {
+        tryProcess();
+      }, 0);
 
-      // 최종 타임아웃: 스크립트가 로드되지 않아도 일정 시간 후 표시
-      finalTimeout = setTimeout(() => {
-        if (checkInterval) {
-          clearInterval(checkInterval);
-          checkInterval = null;
-        }
+      // 최종 타임아웃
+      const finalTimeout = setTimeout(() => {
         setIsLoading(false);
         if (onLoadComplete) {
           onLoadComplete();
         }
-      }, 5000);
-    }, 50);
+      }, 3000);
+
+      return () => {
+        clearTimeout(immediateTimeout);
+        clearTimeout(finalTimeout);
+      };
+    }
+
+    // 스크립트 로드 이벤트 리스너 (이벤트 기반 - setInterval 최소화)
+    let processed = false;
+    const handleScriptLoad = () => {
+      if (!processed) {
+        processed = tryProcess();
+      }
+    };
+
+    window.addEventListener('instagram-script-loaded', handleScriptLoad);
+
+    // 폴백: 짧은 간격으로 최대 10회만 체크 (기존 무한 setInterval 대신)
+    let checkCount = 0;
+    const maxChecks = 10;
+    const checkInterval = setInterval(() => {
+      checkCount++;
+      if (tryProcess() || checkCount >= maxChecks) {
+        clearInterval(checkInterval);
+        processed = true;
+      }
+    }, 100);
+
+    // 최종 타임아웃: 3초 후 강제 표시
+    const finalTimeout = setTimeout(() => {
+      clearInterval(checkInterval);
+      setIsLoading(false);
+      if (onLoadComplete) {
+        onLoadComplete();
+      }
+    }, 3000);
 
     return () => {
-      clearTimeout(timeoutId);
-      if (checkInterval) {
-        clearInterval(checkInterval);
-      }
-      if (finalTimeout) {
-        clearTimeout(finalTimeout);
-      }
+      window.removeEventListener('instagram-script-loaded', handleScriptLoad);
+      clearInterval(checkInterval);
+      clearTimeout(finalTimeout);
     };
   }, [url, isMounted, onLoadComplete]);
 
@@ -292,6 +302,16 @@ export default function InstagramEmbed({ url, className = '', onLoadComplete }: 
         maxHeight: '100%',
       }}
     >
+      {/* 로딩 오버레이 - 각 embed마다 개별 로딩 표시 */}
+      {isLoading && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-gray-100 via-gray-50 to-gray-100 rounded-lg">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-12 h-12 border-4 border-pink-200 border-t-pink-500 rounded-full animate-spin"></div>
+            <div className="text-gray-400 text-sm font-medium">로딩 중...</div>
+          </div>
+        </div>
+      )}
+      
       <div
         ref={embedWrapperRef}
         style={{
@@ -302,10 +322,13 @@ export default function InstagramEmbed({ url, className = '', onLoadComplete }: 
           width: '100%',
           height: '100%',
           overflow: 'hidden',
+          opacity: isLoading ? 0 : 1, // 로딩 중에는 투명하게
+          transition: 'opacity 0.3s ease-in-out',
         }}
       >
         <blockquote
           key={url}
+          id={blockquoteIdRef.current}
           className="instagram-media"
           data-instgrm-permalink={url}
           data-instgrm-version="14"

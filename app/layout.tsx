@@ -3,10 +3,12 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { GoogleAnalytics } from "@next/third-parties/google";
+import Script from "next/script";
 import "./globals.css";
 import Header from "@/app/components/ui/Header";
 import Footer from "@/app/components/ui/Footer";
 import QueryProvider from "@/app/providers/QueryProvider";
+import InstagramScriptLoader from "@/app/components/ui/InstagramScriptLoader";
 
 // Geist Sans 폰트 설정: 기본 sans-serif 폰트
 const geistSans = Geist({
@@ -39,6 +41,13 @@ export default function RootLayout({
 
   return (
     <html lang="ko" className="bg-gradient-to-br from-pink-50/20 via-white to-orange-50/20">
+      <head>
+        {/* Instagram 도메인 사전 연결 - 로딩 속도 최적화 */}
+        <link rel="preconnect" href="https://www.instagram.com" />
+        <link rel="dns-prefetch" href="https://www.instagram.com" />
+        <link rel="preconnect" href="https://static.cdninstagram.com" />
+        <link rel="dns-prefetch" href="https://static.cdninstagram.com" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col bg-gradient-to-br from-pink-50/20 via-white to-orange-50/20`}
       >
@@ -60,8 +69,14 @@ export default function RootLayout({
           <GoogleAnalytics gaId={gaMeasurementId} />
         )}
 
-        {/* Instagram Embed Script */}
-        <script async src="//www.instagram.com/embed.js"></script>
+        {/* Instagram 스크립트 로드 감지 (클라이언트 컴포넌트) */}
+        <InstagramScriptLoader />
+
+        {/* Instagram Embed Script - beforeInteractive로 빠른 로딩 */}
+        <Script
+          src="//www.instagram.com/embed.js"
+          strategy="beforeInteractive"
+        />
       </body>
     </html>
   );
