@@ -12,7 +12,7 @@ export default function ContentsPage() {
           {/* 페이지 헤더 */}
           <div className="mb-12 text-center">
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-              콘텐츠 제작
+              릴스 제작
             </h1>
             <p className="text-base sm:text-lg text-gray-600 max-w-4xl mx-auto whitespace-nowrap overflow-hidden text-ellipsis">
                 100만 이상 조회수의 릴스로 훈련된 AI 기반 도구로 더 쉽고 빠르게 나만의 릴스를 만들어보세요.

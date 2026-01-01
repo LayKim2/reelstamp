@@ -56,8 +56,15 @@ async function fetchRankingData(category: Category): Promise<RankingItem[]> {
     .limit(5); // 상위 5개만 가져오기
 
   if (error) {
-    console.error('랭킹 데이터 조회 오류:', error);
-    throw error;
+    console.error('랭킹 데이터 조회 오류:', {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code,
+      category: category,
+      fullError: error,
+    });
+    throw new Error(`랭킹 데이터 조회 실패 (${category}): ${error.message || '알 수 없는 오류'}`);
   }
 
   // 데이터가 없으면 빈 배열 반환

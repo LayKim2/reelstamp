@@ -2,7 +2,7 @@
 
 import { useRef } from 'react';
 import InstagramEmbed from '@/app/components/ui/InstagramEmbed';
-import { Eye } from 'lucide-react';
+import { Eye, Crown } from 'lucide-react';
 
 interface TodayCreatorSectionProps {
   // 분석 릴스 영상 정보 (내가 분석한 크리에이터)
@@ -63,7 +63,7 @@ export default function TodayCreatorSection({ analysisReel, topVideos }: TodayCr
           {/* 메인 크리에이터 소개 영상 카드 */}
           <div className="mb-8">
             <div className="relative">
-              <div className="bg-gradient-to-br from-white via-red-50/20 to-red-50/15 rounded-3xl shadow-2xl border-2 border-red-500 overflow-hidden flex flex-col h-[520px] group cursor-pointer hover:border-red-600 transition-all duration-300">
+              <div className="bg-gradient-to-br from-white via-red-50/20 to-red-50/15 rounded-3xl shadow-2xl border-2 border-red-500 overflow-hidden flex flex-col group cursor-pointer hover:border-red-600 transition-all duration-300">
                 {/* 그라데이션 오버레이 */}
                 <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 via-transparent to-red-500/3 pointer-events-none z-0"></div>
                 
@@ -85,13 +85,15 @@ export default function TodayCreatorSection({ analysisReel, topVideos }: TodayCr
                   </div>
                 </div>
                 
-                {/* 영상 영역 */}
+                {/* 영상 영역 - 높이 계산식 적용 */}
                 <div className="flex-1 min-h-0 relative overflow-hidden mx-4 mb-5 rounded-2xl shadow-inner border border-red-300/40">
-                  <div className="absolute w-full" style={{ top: '-60px', height: 'calc(100% + 460px)' }}>
-                    <InstagramEmbed 
-                      url={analysisReel.url} 
-                      className="w-full h-full" 
-                    />
+                  <div className="relative w-full overflow-hidden" style={{ paddingBottom: '120%', height: 0 }}>
+                    <div className="absolute inset-0 w-full h-full overflow-hidden" style={{ top: '-60px', height: 'calc(100% + 60px)' }}>
+                      <InstagramEmbed 
+                        url={analysisReel.url} 
+                        className="w-full h-full" 
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -120,46 +122,62 @@ export default function TodayCreatorSection({ analysisReel, topVideos }: TodayCr
                 WebkitOverflowScrolling: 'touch', // iOS에서 부드러운 스크롤
               }}
             >
-              {topVideos.map((video, index) => (
-                <div 
-                  key={index} 
-                  className="relative flex-shrink-0"
-                  style={{ 
-                    width: '85vw',
-                    maxWidth: '320px',
-                  }}
-                >
-                  <div className="bg-white rounded-2xl shadow-md border border-gray-200 hover:shadow-2xl hover:scale-[1.02] hover:border-gray-300 transition-all duration-300 ease-out overflow-hidden flex flex-col h-[420px] group cursor-pointer">
-                    {/* 영상 영역 */}
-                    <div className="flex-1 min-h-0 overflow-hidden relative">
-                      <div className="absolute inset-0 w-full h-full overflow-hidden">
-                        <div className="absolute w-full" style={{ top: '-60px', bottom: '-60px', height: 'calc(100% + 130px)' }}>
+              {topVideos.map((video, index) => {
+                const rank = index + 1;
+                const getRankBadgeStyle = (rank: number) => {
+                  switch (rank) {
+                    case 1:
+                      return 'bg-gradient-to-br from-[#FF69B4] via-[#FFA500] to-[#FFD700] text-white';
+                    case 2:
+                      return 'bg-gradient-to-br from-[#C0C0C0] to-[#A0A0A0] text-black';
+                    case 3:
+                      return 'bg-gradient-to-br from-[#CD7F32] to-[#A0522D] text-white';
+                    default:
+                      return 'bg-gray-700 text-white';
+                  }
+                };
+                return (
+                  <div 
+                    key={index} 
+                    className="relative flex-shrink-0"
+                    style={{ 
+                      width: '85vw',
+                      maxWidth: '320px',
+                    }}
+                  >
+                    <div className="bg-white rounded-2xl shadow-md border border-gray-200 hover:shadow-2xl hover:scale-[1.02] hover:border-gray-300 transition-all duration-300 ease-out overflow-hidden flex flex-col cursor-pointer">
+                      {/* 영상 영역 - 9:16 비율로 제한하여 하단 UI 숨김 */}
+                      <div className="relative w-full overflow-hidden" style={{ paddingBottom: '120%', height: 0 }}>
+                        {/* 랭킹 배지와 제목 - 비디오 영역 위에 오버레이 */}
+                        <div className="absolute top-4 left-5 z-30 flex items-center gap-3 max-w-[calc(100%-2.5rem)]">
+                          <div
+                            className={`px-4 py-2 rounded-full text-sm font-bold flex items-center gap-1.5 shadow-md flex-shrink-0 ${getRankBadgeStyle(rank)}`}
+                          >
+                            <Crown className="w-4 h-4" />
+                            {`${rank}위`}
+                          </div>
+                          {video.title && (
+                            <p className="text-base font-medium text-white truncate drop-shadow-lg">
+                              {video.title}
+                            </p>
+                          )}
+                        </div>
+                        <div className="absolute inset-0 w-full h-full overflow-hidden" style={{ top: '-60px', height: 'calc(100% + 60px)' }}>
                           <InstagramEmbed 
                             url={video.url} 
                             className="w-full h-full" 
                           />
                         </div>
+                        {/* 조회수 - 영상 오른쪽 아래 */}
+                        <div className="absolute bottom-4 right-4 z-20 flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-black/70 via-black/60 to-black/50 backdrop-blur-md rounded-xl shadow-lg border border-white/10">
+                          <Eye className="w-4 h-4 text-white" />
+                          <span className="text-sm font-bold text-white tracking-tight">{video.views || video.viewCount}</span>
+                        </div>
                       </div>
-                      {/* 투명 터치 레이어 - embed 위에서 터치 이벤트 처리 */}
-                      <div 
-                        className="absolute inset-0 z-30 lg:hidden"
-                        onTouchStart={handleTouchStart}
-                        style={{ touchAction: 'none' }}
-                      />
-                      {/* 하단 오버레이 - embed 하단 부분 가리기 */}
-                      <div className="absolute bottom-0 left-0 right-0 h-0 bg-white z-10 pointer-events-none"></div>
-                    </div>
-                    
-                    {/* 하단 정보 영역 */}
-                    <div className="shrink-0 p-3 bg-gradient-to-b from-white via-gray-50/50 to-gray-50/30 flex flex-col gap-2 border-t border-gray-200/50">
-                      {/* 제목 - 항상 한 줄 공간 차지 */}
-                      <p className="text-xs text-gray-800 leading-relaxed line-clamp-1 font-medium min-h-[1.25rem]">
-                        {video.title || '\u00A0'}
-                      </p>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -172,7 +190,7 @@ export default function TodayCreatorSection({ analysisReel, topVideos }: TodayCr
           <div className="flex-[1.3] min-w-0">
             <div className="relative">
               {/* 카드 배경 */}
-              <div className="bg-gradient-to-br from-white via-red-50/20 to-red-50/15 rounded-3xl shadow-2xl border-2 border-red-500 hover:shadow-2xl hover:scale-[1.02] hover:border-red-600 transition-all duration-300 ease-out overflow-hidden flex flex-col h-[740px] group cursor-pointer">
+              <div className="bg-gradient-to-br from-white via-red-50/20 to-red-50/15 rounded-3xl shadow-2xl border-2 border-red-500 hover:shadow-2xl hover:scale-[1.02] hover:border-red-600 transition-all duration-300 ease-out overflow-hidden flex flex-col group cursor-pointer">
                 {/* 그라데이션 오버레이 */}
                 <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 via-transparent to-red-500/3 pointer-events-none z-0"></div>
                 
@@ -194,13 +212,15 @@ export default function TodayCreatorSection({ analysisReel, topVideos }: TodayCr
                   </div>
                 </div>
                 
-                {/* 영상 영역 */}
+                {/* 영상 영역 - 높이 계산식 적용 */}
                 <div className="flex-1 min-h-0 relative overflow-hidden mx-4 mb-7 rounded-2xl shadow-inner border border-red-300/40">
-                  <div className="absolute w-full" style={{ top: '-60px', height: 'calc(100% + 460px)' }}>
-                    <InstagramEmbed 
-                      url={analysisReel.url} 
-                      className="w-full h-full" 
-                    />
+                  <div className="relative w-full overflow-hidden" style={{ paddingBottom: '120%', height: 0 }}>
+                    <div className="absolute inset-0 w-full h-full overflow-hidden" style={{ top: '-60px', height: 'calc(100% + 60px)' }}>
+                      <InstagramEmbed 
+                        url={analysisReel.url} 
+                        className="w-full h-full" 
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -217,31 +237,53 @@ export default function TodayCreatorSection({ analysisReel, topVideos }: TodayCr
             
             {/* Top 3 영상 그리드 */}
             <div className="grid grid-cols-3 gap-6">
-              {topVideos.map((video, index) => (
-                <div key={index} className="bg-white rounded-2xl shadow-md border border-gray-200 hover:shadow-2xl hover:scale-[1.02] hover:border-gray-300 transition-all duration-300 ease-out overflow-hidden flex flex-col h-[480px] group cursor-pointer">
-                  {/* 영상 영역 */}
-                  <div className="flex-1 min-h-0 overflow-hidden relative">
-                    <div className="absolute inset-0 w-full h-full overflow-hidden">
-                      <div className="absolute w-full" style={{ top: '-60px', bottom: '-60px', height: 'calc(100% + 130px)' }}>
+              {topVideos.map((video, index) => {
+                const rank = index + 1;
+                const getRankBadgeStyle = (rank: number) => {
+                  switch (rank) {
+                    case 1:
+                      return 'bg-gradient-to-br from-[#FF69B4] via-[#FFA500] to-[#FFD700] text-white';
+                    case 2:
+                      return 'bg-gradient-to-br from-[#C0C0C0] to-[#A0A0A0] text-black';
+                    case 3:
+                      return 'bg-gradient-to-br from-[#CD7F32] to-[#A0522D] text-white';
+                    default:
+                      return 'bg-gray-700 text-white';
+                  }
+                };
+                return (
+                  <div key={index} className="bg-white rounded-2xl shadow-md border border-gray-200 hover:shadow-2xl hover:scale-[1.02] hover:border-gray-300 transition-all duration-300 ease-out overflow-hidden flex flex-col cursor-pointer">
+                    {/* 영상 영역 - 9:16 비율로 제한하여 하단 UI 숨김 */}
+                    <div className="relative w-full overflow-hidden" style={{ paddingBottom: '120%', height: 0 }}>
+                      {/* 랭킹 배지와 제목 - 비디오 영역 위에 오버레이 */}
+                      <div className="absolute top-4 left-5 z-30 flex items-center gap-3 max-w-[calc(100%-2.5rem)]">
+                        <div
+                          className={`px-4 py-2 rounded-full text-sm font-bold flex items-center gap-1.5 shadow-md flex-shrink-0 ${getRankBadgeStyle(rank)}`}
+                        >
+                          <Crown className="w-4 h-4" />
+                          {`${rank}위`}
+                        </div>
+                        {video.title && (
+                          <p className="text-lg font-medium text-white truncate drop-shadow-lg">
+                            {video.title}
+                          </p>
+                        )}
+                      </div>
+                      <div className="absolute inset-0 w-full h-full overflow-hidden" style={{ top: '-50px', height: 'calc(100% + 50px)' }}>
                         <InstagramEmbed 
                           url={video.url} 
                           className="w-full h-full" 
                         />
                       </div>
+                      {/* 조회수 - 영상 오른쪽 아래 */}
+                      <div className="absolute bottom-4 right-4 z-20 flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-black/70 via-black/60 to-black/50 backdrop-blur-md rounded-xl shadow-lg border border-white/10">
+                        <Eye className="w-4 h-4 text-white" />
+                        <span className="text-sm font-bold text-white tracking-tight">{video.views || video.viewCount}</span>
+                      </div>
                     </div>
-                    {/* 하단 오버레이 - embed 하단 부분 가리기 */}
-                    <div className="absolute bottom-0 left-0 right-0 h-0 bg-white z-10 pointer-events-none"></div>
                   </div>
-                  
-                  {/* 하단 정보 영역 */}
-                  <div className="shrink-0 p-4 bg-gradient-to-b from-white via-gray-50/50 to-gray-50/30 flex flex-col gap-3 border-t border-gray-200/50">
-                    {/* 제목 - 항상 한 줄 공간 차지 */}
-                    <p className="text-sm text-gray-800 leading-relaxed line-clamp-1 font-medium min-h-[1.5rem]">
-                      {video.title || '\u00A0'}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>

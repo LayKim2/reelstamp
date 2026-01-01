@@ -58,6 +58,8 @@ export default function InstagramEmbed({
     }, 300);
   };
 
+
+
   // SSR 중에는 로딩 상태만 표시
   if (!isMounted) {
     return (
