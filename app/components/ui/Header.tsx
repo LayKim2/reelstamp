@@ -4,17 +4,27 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import Image from 'next/image';
 import Modal from './Modal';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // 헤더 컴포넌트
 export default function Header() {
+  const pathname = usePathname();
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [showComingSoonModal, setShowComingSoonModal] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  // 현재 경로가 메뉴와 일치하는지 확인하는 함수
+  const isActive = (path: string) => {
+    if (path === '/contents/script-creation') {
+      return pathname.startsWith('/contents');
+    }
+    return pathname === path;
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -72,15 +82,29 @@ export default function Header() {
           <nav className="hidden md:flex items-center gap-8">
             <Link
               href="/contents/script-creation"
-              className="text-base font-medium text-gray-700 hover:text-gray-900 transition-colors"
+              className={`text-base font-medium transition-all relative ${
+                isActive('/contents/script-creation')
+                  ? 'text-transparent bg-clip-text bg-gradient-to-r from-[#EB48B1] to-[#F59A39] font-bold scale-105'
+                  : 'text-gray-700 hover:text-gray-900'
+              }`}
             >
               릴스 제작
+              {isActive('/contents/script-creation') && (
+                <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-[#EB48B1] to-[#F59A39] rounded-full"></span>
+              )}
             </Link>
             <Link
               href="/ranking"
-              className="text-base font-medium text-gray-700 hover:text-gray-900 transition-colors"
+              className={`text-base font-medium transition-all relative ${
+                isActive('/ranking')
+                  ? 'text-transparent bg-clip-text bg-gradient-to-r from-[#EB48B1] to-[#F59A39] font-bold scale-105'
+                  : 'text-gray-700 hover:text-gray-900'
+              }`}
             >
               인기 급상승 릴스
+              {isActive('/ranking') && (
+                <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-[#EB48B1] to-[#F59A39] rounded-full"></span>
+              )}
             </Link>
           </nav>
 
@@ -141,16 +165,34 @@ export default function Header() {
               <Link
                   href="/contents/script-creation"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="px-6 py-4 text-lg font-medium text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
+                  className={`px-6 py-4 text-lg font-medium rounded-lg transition-all relative ${
+                    isActive('/contents/script-creation')
+                      ? 'bg-gradient-to-r from-[#EB48B1]/10 to-[#F59A39]/10 font-bold'
+                      : 'text-gray-900 hover:bg-gray-50'
+                  }`}
                 >
-                  릴스 제작
+                  <span className={isActive('/contents/script-creation') ? 'bg-gradient-to-r from-[#EB48B1] to-[#F59A39] bg-clip-text text-transparent' : ''}>
+                    릴스 제작
+                  </span>
+                  {isActive('/contents/script-creation') && (
+                    <span className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#EB48B1] to-[#F59A39] rounded-r-full"></span>
+                  )}
                 </Link>
                 <Link
                   href="/ranking"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="px-6 py-4 text-lg font-medium text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
+                  className={`px-6 py-4 text-lg font-medium rounded-lg transition-all relative ${
+                    isActive('/ranking')
+                      ? 'bg-gradient-to-r from-[#EB48B1]/10 to-[#F59A39]/10 font-bold'
+                      : 'text-gray-900 hover:bg-gray-50'
+                  }`}
                 >
-                  인기 급상승 릴스
+                  <span className={isActive('/ranking') ? 'bg-gradient-to-r from-[#EB48B1] to-[#F59A39] bg-clip-text text-transparent' : ''}>
+                    인기 급상승 릴스
+                  </span>
+                  {isActive('/ranking') && (
+                    <span className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#EB48B1] to-[#F59A39] rounded-r-full"></span>
+                  )}
                 </Link>
                 <button
                   type="button"

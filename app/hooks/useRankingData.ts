@@ -53,7 +53,7 @@ async function fetchRankingData(category: Category): Promise<RankingItem[]> {
     .eq('category', category)
     .order('views', { ascending: false })
     .order('updated_at', { ascending: false })
-    .limit(5); // 상위 5개만 가져오기
+    .limit(8); // 상위 8개 가져오기
 
   if (error) {
     console.error('랭킹 데이터 조회 오류:', {

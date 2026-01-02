@@ -1,7 +1,7 @@
 // 랭킹 페이지: 릴스 랭킹 서비스 - Supabase에서 실시간 랭킹 데이터를 가져와 표시
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Category, CATEGORY_NAMES } from '@/app/types/ranking';
 import { useRankingData } from '@/app/hooks/useRankingData';
 import { useTodayCreator } from '@/app/hooks/useTodayCreator';
@@ -14,7 +14,7 @@ type TabType = 'trend' | 'creator';
 export default function RankingPage() {
   const [activeTab, setActiveTab] = useState<TabType>('trend');
   const [selectedCategory, setSelectedCategory] = useState<Category>('trend');
-  
+
   // 오늘의 크리에이터 데이터 페칭
   const { data: todayCreatorData, isLoading: isTodayCreatorLoading, error: todayCreatorError } = useTodayCreator();
   
@@ -23,6 +23,55 @@ export default function RankingPage() {
   const { data: knowledgeData = [], isLoading: knowledgeLoading, error: knowledgeError } = useRankingData('knowledge');
   const { data: reviewData = [], isLoading: reviewLoading, error: reviewError } = useRankingData('review');
 
+  // 지연 로딩을 위한 상태 (카테고리별로 관리)
+  const [visibleCount, setVisibleCount] = useState<Record<Category, number>>({
+    trend: 4,
+    knowledge: 4,
+    review: 4
+  });
+  const [isLazyLoading, setIsLazyLoading] = useState<Record<Category, boolean>>({
+    trend: false,
+    knowledge: false,
+    review: false
+  });
+
+  // 스크롤 감지를 위한 Ref
+  const loaderRef = useRef<HTMLDivElement>(null);
+
+  // Intersection Observer 설정: 스크롤이 하단에 도달하면 추가 데이터 로드
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (first.isIntersecting && 
+            !isLazyLoading[selectedCategory] && 
+            visibleCount[selectedCategory] < 8 &&
+            activeTab === 'trend') {
+          handleLoadMore(selectedCategory);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentLoader = loaderRef.current;
+    if (currentLoader) {
+      observer.observe(currentLoader);
+    }
+
+    return () => {
+      if (currentLoader) {
+        observer.unobserve(currentLoader);
+      }
+    };
+  }, [selectedCategory, isLazyLoading, visibleCount, activeTab, trendLoading, knowledgeLoading, reviewLoading]);
+
+  const handleLoadMore = (category: Category) => {
+    // 5~8위까지 즉시 리스트에 추가 (각 카드의 InstagramEmbed가 자체 로딩을 시작함)
+    if (visibleCount[category] < 8) {
+      setVisibleCount(prev => ({ ...prev, [category]: 8 }));
+    }
+  };
+  
   // 선택된 카테고리에 맞는 데이터와 로딩/에러 상태 가져오기
   const getCategoryData = (category: Category) => {
     switch (category) {
@@ -180,7 +229,7 @@ export default function RankingPage() {
                 }`}
                 style={activeTab === 'trend' ? { marginBottom: '-2px', zIndex: 10 } : { zIndex: 1 }}
               >
-                오늘의 트랜드
+                오늘의 트렌드
               </button>
               <button
                 onClick={() => setActiveTab('creator')}
@@ -229,14 +278,6 @@ export default function RankingPage() {
                 key={category}
                 className={isSelected ? 'block' : 'hidden'}
               >
-                {/* 로딩 상태 */}
-                {categoryLoading && (
-                  <div className="flex items-center justify-center py-20">
-                    <Loader2 className="w-8 h-8 animate-spin text-pink-500" />
-                    <span className="ml-3 text-gray-600">랭킹 데이터를 불러오는 중...</span>
-                  </div>
-                )}
-
                 {/* 에러 상태 */}
                 {categoryError && (
                   <div className="px-4 sm:px-6 lg:px-8 py-12 text-center">
@@ -245,25 +286,49 @@ export default function RankingPage() {
                   </div>
                 )}
 
-                {/* 데이터가 없을 때 */}
+                {/* 데이터가 없을 때 (로딩 중이 아닐 때) */}
                 {!categoryLoading && !categoryError && categoryData.length === 0 && (
                   <div className="px-4 sm:px-6 lg:px-8 py-12 text-center">
                     <p className="text-gray-500">아직 랭킹 데이터가 없습니다.</p>
                   </div>
                 )}
 
-                {/* 모바일: 기존 세로 패널 레이아웃 */}
-                {!categoryLoading && !categoryError && categoryData.length > 0 && (
-                  <div className="md:hidden grid grid-cols-1 gap-4">
-                    {categoryData.map((item) => renderMobileCard(item, category))}
-                  </div>
+                {/* 로딩 중이거나 데이터가 있을 때 카드 표시 */}
+                {(categoryLoading || categoryData.length > 0) && (
+                  <>
+                    {/* 모바일: 기존 세로 패널 레이아웃 */}
+                    <div className="md:hidden flex flex-col gap-4 px-4">
+                      {categoryLoading 
+                        ? [1, 2, 3, 4].map(rank => (
+                            <div key={`loading-mobile-${rank}`} className="w-full pb-[133.33%] bg-gray-100 rounded-2xl animate-pulse relative overflow-hidden">
+                              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                                <Loader2 className="w-8 h-8 animate-spin text-pink-500" />
+                              </div>
+                            </div>
+                          ))
+                        : categoryData.slice(0, visibleCount[category]).map((item) => renderMobileCard(item, category))
+                      }
+                    </div>
+
+                    {/* PC: 전체 너비 카드 레이아웃 */}
+                    <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-6 w-full px-4 sm:px-6 lg:px-8">
+                      {categoryLoading
+                        ? [1, 2, 3, 4].map(rank => (
+                            <div key={`loading-pc-${rank}`} className="w-full pb-[133.33%] bg-gray-100 rounded-2xl animate-pulse relative overflow-hidden">
+                              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                                <Loader2 className="w-8 h-8 animate-spin text-pink-500" />
+                              </div>
+                            </div>
+                          ))
+                        : categoryData.slice(0, visibleCount[category]).map((item) => renderPCCard(item, category))
+                      }
+                    </div>
+                  </>
                 )}
 
-                {/* PC: 전체 너비 카드 레이아웃 */}
-                {!categoryLoading && !categoryError && categoryData.length > 0 && (
-                  <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-6 w-full px-4 sm:px-6 lg:px-8">
-                    {categoryData.map((item) => renderPCCard(item, category))}
-                  </div>
+                {/* 지연 로딩 감지용 엘리먼트 (현재 선택된 카테고리에만 Ref 적용) */}
+                {isSelected && visibleCount[category] < 8 && !categoryLoading && categoryData.length > 0 && (
+                  <div ref={loaderRef} className="h-10 w-full" />
                 )}
               </div>
             );
