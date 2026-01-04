@@ -1,10 +1,9 @@
 // 대본 생성 결과 페이지: 테이블 구조로 대본 표시 및 AI 챗봇 인터랙션
 'use client';
 
-import { useEffect, useState, Suspense, useRef } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { createPortal } from 'react-dom';
 import { Send, MessageSquare, ChevronDown, ChevronUp, Sparkles, Layout } from 'lucide-react';
 import Image from 'next/image';
 import { ReelScriptResponse, ScriptSegment } from '@/app/types/reels-creation';
@@ -49,13 +48,6 @@ function ScriptResultContent() {
   const [isChatOpen, setIsChatOpen] = useState(true); // 챗봇 열림/닫힘 상태 (기본값: 열림)
   const [isTyping, setIsTyping] = useState(true); // 타이핑 중인지 여부
   const [expandedDesignReasons, setExpandedDesignReasons] = useState<Set<string>>(new Set()); // 설계 이유 말풍선 표시 상태
-  const [tooltipPositions, setTooltipPositions] = useState<{ [key: string]: { top: number; left: number } }>({});
-  const iconRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     // sessionStorage에서 생성된 데이터 가져오기
@@ -80,37 +72,6 @@ function ScriptResultContent() {
       setReelTopic(storedTopic);
     }
   }, [router]);
-
-  // 아이콘 위치 계산 및 말풍선 위치 업데이트
-  useEffect(() => {
-    const updateTooltipPositions = () => {
-      const newPositions: { [key: string]: { top: number; left: number } } = {};
-      
-          Object.keys(iconRefs.current).forEach((segmentId) => {
-            const iconElement = iconRefs.current[segmentId];
-            if (iconElement && expandedDesignReasons.has(segmentId)) {
-              const rect = iconElement.getBoundingClientRect();
-              newPositions[segmentId] = {
-                top: rect.top, // 아이콘의 top 위치
-                left: rect.right - 256, // 말풍선 너비(256px)만큼 왼쪽으로 이동하여 아이콘 위에 표시
-              };
-            }
-          });
-      
-      setTooltipPositions(newPositions);
-    };
-
-    if (expandedDesignReasons.size > 0) {
-      updateTooltipPositions();
-      window.addEventListener('scroll', updateTooltipPositions);
-      window.addEventListener('resize', updateTooltipPositions);
-    }
-
-    return () => {
-      window.removeEventListener('scroll', updateTooltipPositions);
-      window.removeEventListener('resize', updateTooltipPositions);
-    };
-  }, [expandedDesignReasons]);
 
   // 초기 AI 메시지 타이핑 효과
   useEffect(() => {
@@ -416,9 +377,6 @@ function ScriptResultContent() {
                           {/* 설계 이유 아이콘 (오른쪽 아래) */}
                           <div className="absolute right-4 bottom-4">
                             <button
-                              ref={(el) => {
-                                iconRefs.current[segment.id] = el;
-                              }}
                               onClick={() => {
                                 setExpandedDesignReasons(prev => {
                                   const newSet = new Set(prev);
@@ -441,6 +399,28 @@ function ScriptResultContent() {
                                 className="w-9 h-9 cursor-pointer transition-all hover:scale-110"
                                 unoptimized
                               />
+                              
+                              {/* 설계 이유 말풍선 (아이콘과 함께 움직임) */}
+                              {expandedDesignReasons.has(segment.id) && (
+                                <div
+                                  className="absolute right-0 top-0 -translate-y-full mb-2 bg-white border border-[#EDEDF1] rounded-xl shadow-lg z-[9999]"
+                                  style={{
+                                    width: '258px',
+                                    height: '72px',
+                                    marginTop: '-8px',
+                                    padding: '12px 16px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                  }}
+                                >
+                                  <div className="text-[12px] text-[#373A46] leading-relaxed overflow-hidden text-ellipsis line-clamp-3">
+                                    {segment.designReason}
+                                  </div>
+                                  {/* 말풍선 꼬리 (아래쪽, 아이콘을 가리킴) */}
+                                  <div className="absolute right-4 bottom-0 translate-y-full w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-[#EDEDF1]"></div>
+                                  <div className="absolute right-[17px] bottom-0 translate-y-full w-0 h-0 border-l-7 border-r-7 border-t-7 border-transparent border-t-white"></div>
+                                </div>
+                              )}
                             </button>
                           </div>
                         </div>
@@ -685,42 +665,6 @@ function ScriptResultContent() {
         )}
       </div>
       
-      {/* 설계 이유 말풍선 (포탈로 렌더링하여 헤더 위에 표시) */}
-      {mounted && expandedDesignReasons.size > 0 && createPortal(
-        <>
-          {segments.map((segment) => {
-            if (!expandedDesignReasons.has(segment.id) || !tooltipPositions[segment.id]) return null;
-            const pos = tooltipPositions[segment.id];
-            return (
-              <div
-                key={segment.id}
-                className="fixed bg-white border border-[#EDEDF1] rounded-xl shadow-lg z-[9999]"
-                style={{
-                  position: 'absolute',
-                  width: '258px',
-                  height: '72px',
-                  top: `${pos.top}px`,
-                  left: `${pos.left}px`,
-                  transform: 'translateY(-100%)',
-                  marginTop: '-8px',
-                  padding: '12px 16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                }}
-              >
-                <div className="text-[12px] text-[#373A46] leading-relaxed overflow-hidden text-ellipsis line-clamp-3">
-                  {segment.designReason}
-                </div>
-                {/* 말풍선 꼬리 (아래쪽, 아이콘을 가리킴) */}
-                <div className="absolute right-4 bottom-0 translate-y-full w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-[#EDEDF1]"></div>
-                <div className="absolute right-[17px] bottom-0 translate-y-full w-0 h-0 border-l-7 border-r-7 border-t-7 border-transparent border-t-white"></div>
-              </div>
-            );
-          })}
-        </>,
-        document.body
-      )}
-
       {/* 커스텀 스크롤바 스타일 */}
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {

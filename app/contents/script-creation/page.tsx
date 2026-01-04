@@ -408,16 +408,6 @@ export default function ScriptCreationPage() {
                   </>
                 ) : (
                   <>
-                    <div className="relative w-12 h-12 flex-shrink-0 -my-2">
-                      <Image
-                        src="/images/reelstamp_loading.gif"
-                        alt="Loading"
-                        width={48}
-                        height={48}
-                        className="w-12 h-12 object-contain"
-                        unoptimized
-                      />
-                    </div>
                     <span>대본 생성하기</span>
                   </>
                 )}
