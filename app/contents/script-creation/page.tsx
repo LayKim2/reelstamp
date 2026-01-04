@@ -10,7 +10,7 @@ import LoadingOverlay from '@/app/components/ui/LoadingOverlay';
 import Image from 'next/image';
 import { useGenerateScript } from '@/app/hooks/useGenerateScript';
 import { REEL_CATEGORY_MAP, REEL_LENGTH_MAP, REEL_CATEGORY_OPTIONS, REEL_LENGTH_OPTIONS } from '@/app/lib/constants/reels-creation';
-import { ReelScriptRequest, ReelScriptResponse } from '@/app/types/reels-creation';
+import { ReelScriptRequest } from '@/app/types/reels-creation';
 
 export default function ScriptCreationPage() {
   const router = useRouter();
@@ -90,7 +90,7 @@ export default function ScriptCreationPage() {
     }
   };
 
-  // 제출 핸들러: 버튼 클릭 시 더미 데이터와 함께 결과 페이지로 바로 이동 (API 호출 주석처리)
+  // 제출 핸들러
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -100,104 +100,6 @@ export default function ScriptCreationPage() {
       return;
     }
 
-    // 더미 데이터 생성 (결과 페이지에서 필요한 데이터 - 새로운 테이블 구조 지원)
-    const dummyData = {
-      reelType: category || '정보',
-      reelLength: videoLength || '30초',
-      finalLengthSeconds: 30,
-      lengthReason: '입력하신 내용을 바탕으로 최적의 길이로 생성되었습니다.',
-      templates: [
-        '첫 3초 안에 핵심 메시지 전달하기',
-        '자막과 영상의 타이밍 맞추기',
-        '끝맺음에 CTA(행동 유도) 포함하기'
-      ],
-      script: `[0-3초] 훅 (시선 집중)
-${topic || '주제'}에 대해 알고 싶으신가요?
-
-[3-10초] 문제 제시
-많은 사람들이 ${topic || '이 주제'}에 대해 잘못 알고 있습니다.
-하지만 오늘 제가 알려드릴 내용을 보시면...
-
-[10-20초] 핵심 내용
-${content || '입력하신 내용'}을 바탕으로
-실제로는 이렇게 접근하는 것이 효과적입니다.
-
-[20-30초] 마무리 및 CTA
-${additionalContent || '추가 내용이 있다면 여기에 반영됩니다.'}
-이 영상이 도움이 되셨다면 좋아요와 팔로우 부탁드립니다!`,
-      // 타임라인별 세그먼트 데이터 (새로운 테이블 구조)
-      segments: [
-        {
-          id: 'segment-1',
-          section: '후킹',
-          timeline: '0~2',
-          script: `${topic || '주제'}에 대해 알고 싶으신가요?`,
-          screenDesign: {
-            screen: `'${topic || '주제'} = 편견'이라는 편견을 상징하는 AI 생성형 그래픽 (노이즈/글리치 효과).`,
-            subtitle: `${topic || '주제'}에 대해 알고 싶으신가요? (강렬하게 중앙 배치)`
-          }
-        },
-        {
-          id: 'segment-2',
-          section: '문제',
-          timeline: '3~5',
-          script: `많은 사람들이 ${topic || '이 주제'}에 대해 잘못 알고 있습니다.\n하지만 오늘 제가 알려드릴 내용을 보시면...`,
-          screenDesign: {
-            screen: '저가 제품(흐릿함)과 고품질 제품(선명함)을 빠르게 교차 편집.',
-            subtitle: '많은 사람들이 잘못 알고 있습니다.'
-          }
-        },
-        {
-          id: 'segment-3',
-          section: '문제 구체화',
-          timeline: '6~8',
-          script: `${topic || '주제'}의 미묘하지만 결정적인 차이를 아시나요?`,
-          screenDesign: {
-            screen: `${topic || '주제'}의 구조를 힙한 AI 그래픽으로 시각화하며 대비.`,
-            subtitle: '미묘하지만 결정적인 차이'
-          }
-        },
-        {
-          id: 'segment-4',
-          section: '해결책 (캠페인 소개)',
-          timeline: '9~13',
-          script: `${topic || '주제'}의 진실. 우리는 이 인식을 바꾸는 캠페인을 시작합니다.`,
-          screenDesign: {
-            screen: '캠페인 슬로건이 굵고 깨끗한 폰트로 등장. 배경은 고해상도 제품의 완벽한 품질을 보여줌.',
-            subtitle: '인식을 바꾸는 캠페인'
-          }
-        },
-        {
-          id: 'segment-5',
-          section: '해결책 (베네핏 1)',
-          timeline: '14~17',
-          script: `${topic || '주제'}만의 장점. 첫째, 압도적인 품질입니다.`,
-          screenDesign: {
-            screen: '제품을 통해 반대편 사물이 왜곡 없이 선명하게 보이는 컷. (물방울이 맺힌 듯한 깨끗함 강조).',
-            subtitle: '1. 압도적인 품질'
-          }
-        },
-        {
-          id: 'segment-6',
-          section: '해결책 (베네핏 2)',
-          timeline: '18~30',
-          script: `둘째, 까다롭지만 정교한 제작의 예술.\n${content || '입력하신 내용'}을 바탕으로 실제로는 이렇게 접근하는 것이 효과적입니다.\n${additionalContent || '추가 내용이 있다면 여기에 반영됩니다.'}\n이 영상이 도움이 되셨다면 좋아요와 팔로우 부탁드립니다!`,
-          screenDesign: {
-            screen: '레이저 커팅, 다이아몬드 폴리싱 등 고난도 기술 컷 (슬로우 모션).',
-            subtitle: '2. 정교한 제작의 예술'
-          }
-        }
-      ]
-    };
-
-    // sessionStorage에 더미 데이터 저장
-    sessionStorage.setItem('generatedScript', JSON.stringify(dummyData));
-
-    // 결과 페이지로 이동
-    router.push('/contents/script-creation/result');
-
-    // API 호출 부분 주석처리
-    /*
     setIsSubmitting(true);
     setSubmitError(null);
     resetApi();
@@ -221,6 +123,8 @@ ${additionalContent || '추가 내용이 있다면 여기에 반영됩니다.'}
           setIsSubmitting(false);
           // 생성된 데이터를 sessionStorage에 저장하고 결과 페이지로 이동
           sessionStorage.setItem('generatedScript', JSON.stringify(data));
+          // 릴스 주제도 함께 저장
+          sessionStorage.setItem('reelTopic', topic);
           router.push('/contents/script-creation/result');
         },
         onError: (error: any) => {
@@ -238,7 +142,6 @@ ${additionalContent || '추가 내용이 있다면 여기에 반영됩니다.'}
       setSubmitError(error instanceof Error ? error.message : '대본 생성 중 오류가 발생했습니다.');
       setIsSubmitting(false);
     }
-    */
   };
 
   return (
@@ -527,22 +430,6 @@ ${additionalContent || '추가 내용이 있다면 여기에 반영됩니다.'}
       {/* 로딩 오버레이 */}
       <LoadingOverlay isVisible={isSubmitting} text={loadingText} progress={uploadProgress} />
 
-      {/* 성공 모달 */}
-      <Modal
-        isOpen={showSuccessModal}
-        onClose={() => setShowSuccessModal(false)}
-        title="대본 생성 완료"
-        description="Insta DM으로 연락드리겠습니다."
-        icon={
-          <Image
-            src="/images/logo.png"
-            alt="BooQuest"
-            width={120}
-            height={120}
-            className="w-[120px] h-[120px]"
-          />
-        }
-      />
     </div>
   );
 }

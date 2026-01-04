@@ -1,11 +1,11 @@
 // 릴스 제작 관련 상수 정의
 
 // 카테고리 매핑 (UI 표시명 → API 값)
-export const REEL_CATEGORY_MAP: Record<string, 'information' | 'review' | 'vlog' | 'promo'> = {
-  '일상': 'vlog',
+export const REEL_CATEGORY_MAP: Record<string, 'information' | 'review' | 'vlog' | 'other'> = {
   '지식·정보': 'information',
-  '리뷰·추천': 'review',
-  '서비스 소개': 'promo',
+  '리뷰·소개': 'review',
+  '브이로그': 'vlog',
+  '기타': 'other',
 } as const;
 
 // 영상 길이 매핑 (UI 표시명 → API 값)

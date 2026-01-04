@@ -3,7 +3,7 @@ import { ValidationErrorResponse } from './api';
 
 // 대본 생성 요청 타입
 export interface ReelScriptRequest {
-  reel_type: 'information' | 'review' | 'vlog' | 'promo';
+  reel_type: 'information' | 'review' | 'vlog' | 'other';
   reel_topic: string;
   user_request: string;
   reel_length?: number | null;
@@ -14,13 +14,11 @@ export interface ReelScriptRequest {
 // 대본 세그먼트 타입 (타임라인별 구분)
 export interface ScriptSegment {
   id: string;
-  section: string; // 후킹, 문제, 해결책 등
-  timeline: string; // "0-2", "3-5" 등
-  script: string; // 대본 내용
-  screenDesign: {
-    screen: string; // 화면 설명
-    subtitle?: string; // 자막 내용
-  };
+  section: string; // 구간 (후킹, 전개 등)
+  timeline: string; // 시간 (0–3s 등)
+  script: string; // 대본 (나레이션 포함)
+  visualSource: string; // 영상 소스 (구상 컷/촬영 제안 + 자막)
+  designReason: string; // 설계 이유
 }
 
 // 대본 생성 응답 타입

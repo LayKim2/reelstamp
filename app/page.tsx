@@ -77,7 +77,7 @@ export default function Home() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, ease: 'easeOut' }}
               >
-                <span className="text-gray-900">당신의 릴스 성공 공식,</span>
+                <span className="text-gray-900">100만 릴스 제작 파트너,</span>
                 <br className="sm:hidden" />
                 <span 
                   className="text-transparent bg-clip-text bg-gradient-to-r from-[#EB48B1] to-[#F59A39]"

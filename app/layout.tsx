@@ -8,6 +8,8 @@ import "./globals.css";
 import Header from "@/app/components/ui/Header";
 import Footer from "@/app/components/ui/Footer";
 import QueryProvider from "@/app/providers/QueryProvider";
+import { AuthProvider } from "@/app/components/providers/AuthProvider";
+import { getCurrentUser } from "@/app/lib/api/auth";
 
 // Geist Sans 폰트 설정: 기본 sans-serif 폰트
 const geistSans = Geist({
@@ -31,12 +33,15 @@ export const metadata: Metadata = {
 };
 
 // 루트 레이아웃: 헤더 + 메인 콘텐츠 구조
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+  
+  // 서버에서 유저 정보 미리 가져오기 (하이드레이션 패턴)
+  const initialUser = await getCurrentUser();
 
   return (
     <html lang="ko" className="bg-gradient-to-br from-pink-50/20 via-white to-orange-50/20">
@@ -51,16 +56,18 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col bg-gradient-to-br from-pink-50/20 via-white to-orange-50/20`}
       >
         <QueryProvider>
-          {/* 공통 헤더 */}
-          <Header />
-          
-          {/* 메인 콘텐츠 영역 */}
-          <main className="flex-1">
-        {children}
-          </main>
+          <AuthProvider initialUser={initialUser}>
+            {/* 공통 헤더 */}
+            <Header />
+            
+            {/* 메인 콘텐츠 영역 */}
+            <main className="flex-1">
+              {children}
+            </main>
 
-          {/* 공통 푸터 */}
-          <Footer />
+            {/* 공통 푸터 */}
+            <Footer />
+          </AuthProvider>
         </QueryProvider>
 
         {/* Google Analytics 4 */}
