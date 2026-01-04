@@ -213,7 +213,7 @@ export default function RankingPage() {
 
 
   return (
-    <div className="bg-gradient-to-br from-pink-50/30 via-white to-orange-50/30 min-h-screen">
+    <div className="bg-gradient-to-b from-white to-pink-50/30 min-h-screen">
       <div className="w-full pt-8 sm:pt-12 pb-4">
         {/* HOT REELSTAMP RANKING 섹션 */}
         <section className="mb-16">

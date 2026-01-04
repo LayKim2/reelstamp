@@ -2,6 +2,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
 
 interface LoadingOverlayProps {
   isVisible: boolean;
@@ -32,29 +33,52 @@ export default function LoadingOverlay({ isVisible, text = '신청 중...', prog
               exit={{ scale: 0.8, opacity: 0 }}
               transition={{ duration: 0.3, ease: 'easeOut' }}
             >
-              {/* 링 */}
-              <div className="relative w-12 h-12">
-                <div className="absolute inset-0 border-4 border-gray-100 rounded-full"></div>
-                <motion.div
-                  className="absolute inset-0 rounded-full"
-                  style={{
-                    background: 'conic-gradient(from 0deg, #EB48B1 0%, #F59A39 50%, #EB48B1 100%)',
-                    WebkitMask: 'radial-gradient(farthest-side, transparent calc(100% - 4px), black calc(100% - 4px))',
-                    mask: 'radial-gradient(farthest-side, transparent calc(100% - 4px), black calc(100% - 4px))',
-                    filter: 'drop-shadow(0 0 8px rgba(235, 72, 177, 0.3))',
-                  }}
-                  animate={{ rotate: 360 }}
-                  transition={{
-                    duration: 0.8,
-                    repeat: Infinity,
-                    ease: 'linear',
-                  }}
+              {/* GIF 로딩 이미지 */}
+              <div className="relative w-40 h-40">
+                <Image
+                  src="/images/reelstamp_loading.gif"
+                  alt="Loading"
+                  width={160}
+                  height={160}
+                  className="w-40 h-40"
+                  unoptimized
                 />
               </div>
               
               {/* 텍스트 및 진행률 */}
-              <div className="flex flex-col items-center gap-2">
-                <p className="text-sm font-medium text-gray-700">{text}</p>
+              <div className="flex flex-col items-center gap-2 -mt-6 ml-4">
+                <div className="flex items-center gap-1">
+                  <motion.p
+                    className="text-base font-medium text-gray-700"
+                    animate={{ opacity: [0.3, 1, 0.3] }}
+                    transition={{ duration: 1.4, repeat: Infinity }}
+                  >
+                    {text.replace(/\.+$/, '')}
+                  </motion.p>
+                  <span className="flex gap-0.5">
+                    <motion.span
+                      className="text-base font-medium text-gray-700"
+                      animate={{ opacity: [0.3, 1, 0.3] }}
+                      transition={{ duration: 1.4, repeat: Infinity, delay: 0 }}
+                    >
+                      .
+                    </motion.span>
+                    <motion.span
+                      className="text-base font-medium text-gray-700"
+                      animate={{ opacity: [0.3, 1, 0.3] }}
+                      transition={{ duration: 1.4, repeat: Infinity, delay: 0.2 }}
+                    >
+                      .
+                    </motion.span>
+                    <motion.span
+                      className="text-base font-medium text-gray-700"
+                      animate={{ opacity: [0.3, 1, 0.3] }}
+                      transition={{ duration: 1.4, repeat: Infinity, delay: 0.4 }}
+                    >
+                      .
+                    </motion.span>
+                  </span>
+                </div>
                 {progress !== undefined && (
                   <p className="text-xs font-semibold text-gray-600">{Math.round(progress)}%</p>
                 )}

@@ -3,12 +3,19 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, Video, Sparkles, X, Paperclip, Loader2 } from 'lucide-react';
+import { FileText, Video, Sparkles, X, Paperclip, Loader2, RefreshCw } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import Modal from '@/app/components/ui/Modal';
 import LoadingOverlay from '@/app/components/ui/LoadingOverlay';
 import Image from 'next/image';
+import { useGenerateScript } from '@/app/hooks/useGenerateScript';
+import { REEL_CATEGORY_MAP, REEL_LENGTH_MAP, REEL_CATEGORY_OPTIONS, REEL_LENGTH_OPTIONS } from '@/app/lib/constants/reels-creation';
+import { ReelScriptRequest, ReelScriptResponse } from '@/app/types/reels-creation';
 
 export default function ScriptCreationPage() {
+  const router = useRouter();
+  const { mutate: generateScript, data: generatedData, isPending, error: apiError, reset: resetApi } = useGenerateScript();
+
   // 폼 상태 관리
   const [category, setCategory] = useState('');
   const [topic, setTopic] = useState('');
@@ -30,7 +37,6 @@ export default function ScriptCreationPage() {
   const formRef = useRef<HTMLFormElement>(null);
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
   const additionalContentTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const [formHeight, setFormHeight] = useState<number>(600);
 
   // textarea 높이 자동 조정 함수
   const adjustTextareaHeight = (textarea: HTMLTextAreaElement) => {
@@ -38,21 +44,6 @@ export default function ScriptCreationPage() {
     textarea.style.height = `${textarea.scrollHeight}px`;
   };
 
-  // 왼쪽 폼 높이 측정 및 오른쪽 영역 높이 동기화 (ResizeObserver가 자동으로 감지)
-  useEffect(() => {
-    if (!formRef.current) return;
-
-    const updateHeight = () => {
-      if (formRef.current) {
-        setFormHeight(formRef.current.offsetHeight);
-      }
-    };
-
-    const resizeObserver = new ResizeObserver(updateHeight);
-    resizeObserver.observe(formRef.current);
-
-    return () => resizeObserver.disconnect();
-  }, []);
 
   // textarea 초기 높이 설정
   useEffect(() => {
@@ -99,153 +90,175 @@ export default function ScriptCreationPage() {
     }
   };
 
-  // 제출 핸들러
+  // 제출 핸들러: 버튼 클릭 시 더미 데이터와 함께 결과 페이지로 바로 이동 (API 호출 주석처리)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // 카테고리 필수 체크
+    if (!category) {
+      setSubmitError('카테고리를 선택해주세요.');
+      return;
+    }
+
+    // 더미 데이터 생성 (결과 페이지에서 필요한 데이터 - 새로운 테이블 구조 지원)
+    const dummyData = {
+      reelType: category || '정보',
+      reelLength: videoLength || '30초',
+      finalLengthSeconds: 30,
+      lengthReason: '입력하신 내용을 바탕으로 최적의 길이로 생성되었습니다.',
+      templates: [
+        '첫 3초 안에 핵심 메시지 전달하기',
+        '자막과 영상의 타이밍 맞추기',
+        '끝맺음에 CTA(행동 유도) 포함하기'
+      ],
+      script: `[0-3초] 훅 (시선 집중)
+${topic || '주제'}에 대해 알고 싶으신가요?
+
+[3-10초] 문제 제시
+많은 사람들이 ${topic || '이 주제'}에 대해 잘못 알고 있습니다.
+하지만 오늘 제가 알려드릴 내용을 보시면...
+
+[10-20초] 핵심 내용
+${content || '입력하신 내용'}을 바탕으로
+실제로는 이렇게 접근하는 것이 효과적입니다.
+
+[20-30초] 마무리 및 CTA
+${additionalContent || '추가 내용이 있다면 여기에 반영됩니다.'}
+이 영상이 도움이 되셨다면 좋아요와 팔로우 부탁드립니다!`,
+      // 타임라인별 세그먼트 데이터 (새로운 테이블 구조)
+      segments: [
+        {
+          id: 'segment-1',
+          section: '후킹',
+          timeline: '0~2',
+          script: `${topic || '주제'}에 대해 알고 싶으신가요?`,
+          screenDesign: {
+            screen: `'${topic || '주제'} = 편견'이라는 편견을 상징하는 AI 생성형 그래픽 (노이즈/글리치 효과).`,
+            subtitle: `${topic || '주제'}에 대해 알고 싶으신가요? (강렬하게 중앙 배치)`
+          }
+        },
+        {
+          id: 'segment-2',
+          section: '문제',
+          timeline: '3~5',
+          script: `많은 사람들이 ${topic || '이 주제'}에 대해 잘못 알고 있습니다.\n하지만 오늘 제가 알려드릴 내용을 보시면...`,
+          screenDesign: {
+            screen: '저가 제품(흐릿함)과 고품질 제품(선명함)을 빠르게 교차 편집.',
+            subtitle: '많은 사람들이 잘못 알고 있습니다.'
+          }
+        },
+        {
+          id: 'segment-3',
+          section: '문제 구체화',
+          timeline: '6~8',
+          script: `${topic || '주제'}의 미묘하지만 결정적인 차이를 아시나요?`,
+          screenDesign: {
+            screen: `${topic || '주제'}의 구조를 힙한 AI 그래픽으로 시각화하며 대비.`,
+            subtitle: '미묘하지만 결정적인 차이'
+          }
+        },
+        {
+          id: 'segment-4',
+          section: '해결책 (캠페인 소개)',
+          timeline: '9~13',
+          script: `${topic || '주제'}의 진실. 우리는 이 인식을 바꾸는 캠페인을 시작합니다.`,
+          screenDesign: {
+            screen: '캠페인 슬로건이 굵고 깨끗한 폰트로 등장. 배경은 고해상도 제품의 완벽한 품질을 보여줌.',
+            subtitle: '인식을 바꾸는 캠페인'
+          }
+        },
+        {
+          id: 'segment-5',
+          section: '해결책 (베네핏 1)',
+          timeline: '14~17',
+          script: `${topic || '주제'}만의 장점. 첫째, 압도적인 품질입니다.`,
+          screenDesign: {
+            screen: '제품을 통해 반대편 사물이 왜곡 없이 선명하게 보이는 컷. (물방울이 맺힌 듯한 깨끗함 강조).',
+            subtitle: '1. 압도적인 품질'
+          }
+        },
+        {
+          id: 'segment-6',
+          section: '해결책 (베네핏 2)',
+          timeline: '18~30',
+          script: `둘째, 까다롭지만 정교한 제작의 예술.\n${content || '입력하신 내용'}을 바탕으로 실제로는 이렇게 접근하는 것이 효과적입니다.\n${additionalContent || '추가 내용이 있다면 여기에 반영됩니다.'}\n이 영상이 도움이 되셨다면 좋아요와 팔로우 부탁드립니다!`,
+          screenDesign: {
+            screen: '레이저 커팅, 다이아몬드 폴리싱 등 고난도 기술 컷 (슬로우 모션).',
+            subtitle: '2. 정교한 제작의 예술'
+          }
+        }
+      ]
+    };
+
+    // sessionStorage에 더미 데이터 저장
+    sessionStorage.setItem('generatedScript', JSON.stringify(dummyData));
+
+    // 결과 페이지로 이동
+    router.push('/contents/script-creation/result');
+
+    // API 호출 부분 주석처리
+    /*
     setIsSubmitting(true);
     setSubmitError(null);
+    resetApi();
 
     try {
-      // 파일 업로드 (presigned URL 사용)
-      const uploadedFiles: Array<{ fileName: string; fileUrl: string }> = [];
-      
-      if (videoFiles.length > 0) {
-        setLoadingText('파일 업로드 중...');
-        const totalFiles = videoFiles.length;
-        let uploadedBytes = 0;
-        let totalBytes = videoFiles.reduce((sum, file) => sum + file.size, 0);
-        
-        for (let i = 0; i < videoFiles.length; i++) {
-          const file = videoFiles[i];
-          
-          const urlResponse = await fetch('/api/reels-request/upload-url', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              fileName: file.name,
-              fileSize: file.size,
-              contentType: file.type,
-            }),
-          });
-
-          if (!urlResponse.ok) {
-            throw new Error('업로드 URL 생성에 실패했습니다.');
-          }
-
-          const urlData = await urlResponse.json();
-          if (!urlData.success) {
-            throw new Error('업로드 URL 생성에 실패했습니다.');
-          }
-
-          await new Promise<void>((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            
-            xhr.upload.addEventListener('progress', (e) => {
-              if (e.lengthComputable) {
-                const currentFileProgress = (e.loaded / e.total) * file.size;
-                const totalProgress = ((uploadedBytes + currentFileProgress) / totalBytes) * 100;
-                setUploadProgress(Math.min(totalProgress, 100));
-              }
-            });
-            
-            xhr.addEventListener('load', () => {
-              if (xhr.status >= 200 && xhr.status < 300) {
-                uploadedBytes += file.size;
-                resolve();
-              } else {
-                reject(new Error(`파일 업로드에 실패했습니다: ${file.name}`));
-              }
-            });
-            
-            xhr.addEventListener('error', () => {
-              reject(new Error(`파일 업로드 중 오류가 발생했습니다: ${file.name}`));
-            });
-            
-            xhr.open('PUT', urlData.data.uploadUrl);
-            xhr.setRequestHeader('Content-Type', file.type);
-            xhr.send(file);
-          });
-
-          uploadedFiles.push({
-            fileName: file.name,
-            fileUrl: urlData.data.readUrl,
-          });
-        }
-        
-        setUploadProgress(undefined);
-        setLoadingText('대본 생성 중...');
-      }
-
-      // 카테고리 필수 체크
-      if (!category) {
-        setSubmitError('카테고리를 선택해주세요.');
-        setIsSubmitting(false);
-        return;
-      }
-
-      const formData = {
-        topic,
-        content,
-        category,
-        additionalContent: additionalContent || null,
-        videoLength: videoLength || null,
-        files: uploadedFiles,
+      // API 요청 데이터 생성 (타입 안정성 확보)
+      const request: ReelScriptRequest = {
+        reel_type: REEL_CATEGORY_MAP[category] || 'information',
+        reel_topic: topic,
+        user_request: content,
+        reel_length: videoLength ? REEL_LENGTH_MAP[videoLength] : null,
+        extra_request: additionalContent || null,
+        video: videoFiles.length > 0 ? videoFiles : null,
       };
 
-      const response = await fetch('/api/reels-request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+      setLoadingText('대본 생성 중...');
+      
+      // useMutation 호출
+      generateScript(request, {
+        onSuccess: (data) => {
+          setIsSubmitting(false);
+          // 생성된 데이터를 sessionStorage에 저장하고 결과 페이지로 이동
+          sessionStorage.setItem('generatedScript', JSON.stringify(data));
+          router.push('/contents/script-creation/result');
+        },
+        onError: (error: any) => {
+          setIsSubmitting(false);
+          const statusCode = error?.response?.status;
+          const errorMsg = statusCode === 422 
+            ? '입력 정보가 올바르지 않습니다. 다시 확인해주세요.' 
+            : error?.message || '대본 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+          setSubmitError(errorMsg);
+        }
       });
 
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error?.message || '대본 생성 중 오류가 발생했습니다.');
-      }
-
-      // 성공 처리
-      videoPreviewUrls.forEach((url) => URL.revokeObjectURL(url));
-      setTopic('');
-      setContent('');
-      setCategory('');
-      setVideoFiles([]);
-      setVideoPreviewUrls([]);
-      setVideoLength('');
-      setAdditionalContent('');
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-
-      setShowSuccessModal(true);
     } catch (error) {
       console.error('제출 실패:', error);
       setSubmitError(error instanceof Error ? error.message : '대본 생성 중 오류가 발생했습니다.');
-    } finally {
       setIsSubmitting(false);
-      setUploadProgress(undefined);
-      setLoadingText('생성 중...');
     }
+    */
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50/30 via-white to-orange-50/30">
+    <div className="min-h-screen bg-gradient-to-b from-white to-pink-50/30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {/* 페이지 헤더 */}
-        <div className="mb-8">
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-3">
+        <div className="mb-8 text-center">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
             기획·대본 제작
           </h1>
-          <p className="text-lg sm:text-xl text-gray-600">
+          <p className="text-base sm:text-lg text-gray-600">
             100만 조회수 릴스를 분석하여 나만의 릴스 기획과 대본을 생성해드립니다
           </p>
         </div>
 
-        {/* 메인 컨텐츠 영역: 2단 레이아웃 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-          {/* 왼쪽: 입력 폼 영역 */}
-          <div className="order-2 lg:order-1">
-            <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
+        {/* 메인 컨텐츠 영역: 중앙 정렬 */}
+        <div className="flex justify-center">
+          {/* 입력 폼 영역 */}
+          <div className="w-full max-w-2xl">
+            <form ref={formRef} onSubmit={handleSubmit} className="bg-white border-2 border-gray-200 rounded-3xl shadow-xl p-6 sm:p-8 space-y-6">
               {/* 카테고리 */}
               <div>
                 <label className="block text-base font-bold text-gray-900 mb-2.5">
@@ -253,7 +266,7 @@ export default function ScriptCreationPage() {
                 </label>
                 {/* PC: 전체 너비에 맞게 4개 그리드, 모바일: 가로 스크롤 */}
                 <div className="hidden lg:grid lg:grid-cols-4 gap-3">
-                  {['일상', '지식·정보', '리뷰·추천', '서비스 소개'].map((option) => (
+                  {REEL_CATEGORY_OPTIONS.map((option) => (
                     <button
                       key={option}
                       type="button"
@@ -271,7 +284,7 @@ export default function ScriptCreationPage() {
                 {/* 모바일: 가로 스크롤 */}
                 <div className="lg:hidden overflow-x-auto pb-2 -mx-4 px-4" style={{ scrollbarWidth: 'thin' }}>
                   <div className="flex gap-3 min-w-max">
-                    {['일상', '지식·정보', '리뷰·추천', '서비스 소개'].map((option) => (
+                    {REEL_CATEGORY_OPTIONS.map((option) => (
                       <button
                         key={option}
                         type="button"
@@ -426,7 +439,7 @@ export default function ScriptCreationPage() {
                             영상 길이 <span className="text-gray-500 text-xs font-normal">(선택)</span>
                           </label>
                           <div className="grid grid-cols-3 gap-3">
-                            {['30초 미만', '30-40초', '50-60초'].map((option) => (
+                            {REEL_LENGTH_OPTIONS.map((option) => (
                               <button
                                 key={option}
                                 type="button"
@@ -477,41 +490,36 @@ export default function ScriptCreationPage() {
               {/* 제출 버튼 */}
               <button
                 type="submit"
-                disabled={true}
-                className="w-full px-6 py-4 bg-gradient-to-r from-[#EB48B1] to-[#F59A39] text-white font-bold rounded-xl hover:from-[#D93D9F] hover:to-[#E6892F] transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                disabled={isSubmitting}
+                className="w-full px-6 py-4 bg-gradient-to-r from-[#EB48B1] to-[#F59A39] text-white font-bold rounded-xl hover:from-[#D93D9F] hover:to-[#E6892F] transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 h-[56px]"
               >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
                     <span>{loadingText}</span>
                   </>
+                ) : generatedData ? (
+                  <>
+                    <RefreshCw className="w-5 h-5" />
+                    <span>다시 생성하기</span>
+                  </>
                 ) : (
                   <>
-                    <Sparkles className="w-5 h-5" />
+                    <div className="relative w-12 h-12 flex-shrink-0 -my-2">
+                      <Image
+                        src="/images/reelstamp_loading.gif"
+                        alt="Loading"
+                        width={48}
+                        height={48}
+                        className="w-12 h-12 object-contain"
+                        unoptimized
+                      />
+                    </div>
                     <span>대본 생성하기</span>
                   </>
                 )}
               </button>
             </form>
-          </div>
-
-          {/* 오른쪽: 결과/플레이스홀더 영역 */}
-          <div className="hidden lg:block order-1 lg:order-2">
-            <div className="sticky top-8" style={{ height: `${formHeight}px` }}>
-              <div className="h-full bg-gradient-to-br from-white via-pink-50/30 to-orange-50/30 rounded-3xl border-2 border-gray-200 shadow-xl flex items-center justify-center p-8">
-                <div className="text-center">
-                  <div className="relative mb-6">
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#EB48B1] to-[#F59A39] rounded-3xl blur-2xl opacity-20"></div>
-                    <div className="relative w-32 h-32 mx-auto bg-gradient-to-br from-[#EB48B1] to-[#F59A39] rounded-3xl flex items-center justify-center shadow-2xl">
-                      <FileText className="w-16 h-16 text-white" strokeWidth={2} />
-                    </div>
-                  </div>
-                  <h3 className="text-3xl font-bold text-gray-900 mb-3">
-                    클릭 한 번으로<br />대본 생성!
-                  </h3>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>

@@ -6,7 +6,7 @@ import Image from 'next/image';
 
 export default function Footer() {
   return (
-    <footer className="w-full bg-white border-t border-gray-100 mt-auto">
+    <footer className="w-full bg-pink-50/30 mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-1 sm:py-2">
         {/* 모바일: 상단 - 로고와 소셜 미디어 같은 줄 */}
         <div className="flex md:hidden justify-between items-center mb-1 pt-2">

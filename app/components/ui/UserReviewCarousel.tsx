@@ -1,148 +1,235 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import Image from 'next/image';
 
 // 사용자 리뷰 데이터 타입
 interface Review {
   name: string;
-  text1: string;
-  text2: string;
   handle: string;
+  youtubeViews: string;
+  instagramViews: string;
+  text: string;
+  highlightedNumber: string;
+  profileImage?: string;
 }
 
 // 사용자 리뷰 캐러셀 컴포넌트
 export default function UserReviewCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [itemsPerPage, setItemsPerPage] = useState(1);
 
   const reviews: Review[] = [
     {
-      name: '김ㅇㅇ 사용자',
-      text1: '"릴스탬프 사용하고',
-      text2: '조회수 처음으로 10만 달성함"',
-      handle: '@hahahaha',
+      name: '밤하늘',
+      handle: '@nightsky_piano',
+      youtubeViews: '5.6만',
+      instagramViews: '5904',
+      text: '릴스탬프 사용하고 조회수 처음으로 10만 달성했어요',
+      highlightedNumber: '10만',
     },
     {
-      name: '김○○ 사용자',
-      text1: '"릴스탬프 사용 5일만에',
-      text2: '1만 조회수 달성했어요!"',
+      name: '김ㅇㅇ 사용자',
       handle: '@hahahaha',
+      youtubeViews: '3.2만',
+      instagramViews: '4200',
+      text: '릴스탬프 사용 5일만에 1만 조회수 달성했어요!',
+      highlightedNumber: '1만',
     },
     {
       name: '이ㅇㅇ 사용자',
-      text1: '"릴스탬프 추천받고',
-      text2: '첫 릴스가 5만 조회수 달성!"',
       handle: '@test123',
-    },
-    {
-      name: '박○○ 사용자',
-      text1: '"기획 시간이 줄어서',
-      text2: '콘텐츠 제작이 훨씬 쉬워졌어요!"',
-      handle: '@user456',
+      youtubeViews: '2.8만',
+      instagramViews: '3500',
+      text: '릴스탬프 추천받고 첫 릴스가 5만 조회수 달성!',
+      highlightedNumber: '5만',
     },
   ];
 
-  // 화면 크기에 따라 표시할 카드 수 설정
-  useEffect(() => {
-    const updateItemsPerPage = () => {
-      setItemsPerPage(window.innerWidth >= 768 ? 2 : 1);
-    };
-
-    updateItemsPerPage();
-    window.addEventListener('resize', updateItemsPerPage);
-    return () => window.removeEventListener('resize', updateItemsPerPage);
-  }, []);
-
-  const maxIndex = Math.max(0, reviews.length - itemsPerPage);
-
   const nextReview = () => {
-    setCurrentIndex((prev) => (prev >= maxIndex ? 0 : prev + 1));
+    setCurrentIndex((prev) => (prev >= reviews.length - 1 ? 0 : prev + 1));
   };
 
   const prevReview = () => {
-    setCurrentIndex((prev) => (prev <= 0 ? maxIndex : prev - 1));
+    setCurrentIndex((prev) => (prev <= 0 ? reviews.length - 1 : prev - 1));
   };
 
-  return (
-    <div className="relative">
-      {/* 왼쪽 버튼 */}
-      <button
-        onClick={prevReview}
-        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 p-3 rounded-full bg-white border border-gray-300 shadow-lg hover:bg-gray-50 transition-colors"
-        aria-label="이전 리뷰"
-      >
-        <ChevronLeft className="w-6 h-6 text-gray-600" />
-      </button>
+  const currentReview = reviews[currentIndex];
 
-      {/* 캐러셀 컨테이너 */}
-      <div className="relative overflow-hidden">
-        <motion.div
-          animate={{
-            x: itemsPerPage === 1
-              ? `calc(-${currentIndex} * (100% + 1.5rem))`
-              : `calc(-${currentIndex} * (50% + 0.75rem))`
-          }}
-          transition={{ duration: 0.5, ease: 'easeInOut' }}
-          className="flex gap-6"
+  return (
+    <div className="relative flex flex-col items-center w-full max-w-7xl mx-auto">
+      {/* PC: 왼쪽 아이콘, 카드, 오른쪽 아이콘을 한 줄로 배치 / 모바일: 카드만 */}
+      <div className="flex items-center justify-center w-full gap-2 sm:gap-4" style={{ minHeight: '198px' }}>
+        {/* PC: 왼쪽 버튼 (모바일에서는 카드 안에 배치) */}
+        <button
+          onClick={prevReview}
+          className="hidden sm:flex flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors items-center justify-center"
+          aria-label="이전 리뷰"
         >
-          {reviews.map((review, idx) => (
-            <div
-              key={idx}
-              className="flex-shrink-0 border border-gray-300 rounded-lg bg-white p-6 h-64 md:h-80 flex w-full md:w-[calc(50%-12px)]"
+          <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
+        </button>
+
+        {/* 중앙 카드 */}
+        <div className="relative w-full max-w-[852px]">
+          <AnimatePresence mode="wait">
+          <motion.div
+            key={currentIndex}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.3 }}
+            className="flex flex-col sm:flex-row items-start sm:items-center px-4 py-3 sm:px-8 sm:py-4 gap-3 sm:gap-6 bg-[#F8F8FB] rounded-[20px] relative"
+            style={{ minHeight: '198px' }}
+          >
+            {/* 모바일: 왼쪽 버튼 (카드 내부) */}
+            <button
+              onClick={prevReview}
+              className="sm:hidden absolute left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white/90 transition-colors flex items-center justify-center shadow-sm"
+              aria-label="이전 리뷰"
             >
-              {/* 왼쪽 절반: 이미지 공간 (원형, 가운데 정렬) */}
-              <div className="w-1/2 flex items-center justify-center">
-                <div className="w-32 h-32 rounded-full bg-white border border-gray-300 flex items-center justify-center">
-                  {/* 이미지가 들어갈 공간 */}
+              <ChevronLeft className="w-4 h-4 text-gray-600" />
+            </button>
+
+            {/* 모바일: 오른쪽 버튼 (카드 내부) */}
+            <button
+              onClick={nextReview}
+              className="sm:hidden absolute right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white/90 transition-colors flex items-center justify-center shadow-sm"
+              aria-label="다음 리뷰"
+            >
+              <ChevronRight className="w-4 h-4 text-gray-600" />
+            </button>
+            {/* 모바일: 왼쪽 프로필 이미지, 오른쪽 아이디/조회수 / PC: 프로필 이미지만 */}
+            <div className="flex flex-row sm:flex-col items-center sm:items-center gap-3 sm:gap-0 w-full sm:w-auto sm:flex-shrink-0">
+              {/* 왼쪽: 프로필 이미지 */}
+              <div className="flex-shrink-0">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                  {/* 프로필 이미지가 들어갈 공간 */}
+                  <div className="w-full h-full bg-gradient-to-br from-blue-200 to-yellow-200"></div>
                 </div>
               </div>
-              {/* 오른쪽 절반: 텍스트 (가운데 정렬) */}
-              <div className="w-1/2 flex items-center justify-center">
-                <div className="flex flex-col gap-1.5">
-                  <p className="text-base font-bold text-gray-900 leading-tight">
-                    {review.name}
-                  </p>
-                  <p className="text-base text-gray-900 leading-tight">
-                    {review.text1}
-                  </p>
-                  <p className="text-base text-gray-900 leading-tight">
-                    {review.text2}
-                  </p>
-                  <p className="text-sm text-gray-600 mt-1 leading-tight">
-                    {review.handle}
-                  </p>
+
+              {/* 모바일만: 오른쪽 아이디 및 조회수 정보 */}
+              <div className="flex-1 sm:hidden flex flex-col gap-2 justify-center items-center">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-gray-900">{currentReview.name}</h3>
+                  <p className="text-sm text-gray-500">{currentReview.handle}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5">
+                    <Image 
+                      src="/images/icon_youtube.svg" 
+                      alt="YouTube" 
+                      width={28} 
+                      height={28} 
+                      className="w-4 h-4"
+                    />
+                    <span className="text-base font-semibold text-gray-900">{currentReview.youtubeViews}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Image 
+                      src="/images/icon_insta.svg" 
+                      alt="Instagram" 
+                      width={28} 
+                      height={28} 
+                      className="w-4 h-4"
+                    />
+                    <span className="text-base font-semibold text-gray-900">{currentReview.instagramViews}</span>
+                  </div>
                 </div>
               </div>
             </div>
-          ))}
-        </motion.div>
+
+            {/* 중앙: 사용자 정보 및 텍스트 */}
+            <div className="flex-1 flex flex-col gap-2 w-full sm:w-auto pl-10 sm:pl-0 pr-10 sm:pr-0">
+              {/* PC: 첫 번째 줄: 이름, 핸들, 그리고 오른쪽 끝에 조회수 정보 */}
+              <div className="hidden sm:flex flex-row items-center w-full justify-between">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-xl font-bold text-gray-900">{currentReview.name}</h3>
+                  <p className="text-base text-gray-500">{currentReview.handle}</p>
+                </div>
+                {/* 조회수 정보 - 오른쪽 끝 정렬 */}
+                <div className="flex items-center gap-4 flex-shrink-0">
+                  <div className="flex items-center gap-2">
+                    <Image 
+                      src="/images/icon_youtube.svg" 
+                      alt="YouTube" 
+                      width={28} 
+                      height={28} 
+                      className="w-5 h-5"
+                    />
+                    <span className="text-base font-semibold text-gray-900">{currentReview.youtubeViews}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Image 
+                      src="/images/icon_insta.svg" 
+                      alt="Instagram" 
+                      width={28} 
+                      height={28} 
+                      className="w-5 h-5"
+                    />
+                    <span className="text-base font-semibold text-gray-900">{currentReview.instagramViews}</span>
+                  </div>
+                </div>
+              </div>
+              {/* 두 번째 줄: 메인 텍스트 (모바일/PC 모두) */}
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-2 sm:mt-4">
+                {currentReview.text.split(currentReview.highlightedNumber)[0]}
+                <span className="text-[#FF496D]">{currentReview.highlightedNumber}</span>
+                {currentReview.text.split(currentReview.highlightedNumber)[1]}
+              </p>
+
+              {/* 모바일: 페이지네이션 도트 (카드 내부) */}
+              <div 
+                className="sm:hidden flex flex-row items-center justify-center px-[27px] py-4 gap-4 bg-[#F8F8FB] rounded-[30px] mt-2 mx-auto"
+                style={{ width: '144px', height: '46px' }}
+              >
+                {reviews.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentIndex(idx)}
+                    className={`w-2 h-2 rounded-full transition-colors ${
+                      idx === currentIndex
+                        ? 'bg-[#FF496D]'
+                        : 'bg-gray-300'
+                    }`}
+                    aria-label={`리뷰 ${idx + 1}로 이동`}
+                  />
+                ))}
+              </div>
+            </div>
+          </motion.div>
+          </AnimatePresence>
+        </div>
+
+        {/* PC: 오른쪽 버튼 (모바일에서는 카드 안에 배치) */}
+        <button
+          onClick={nextReview}
+          className="hidden sm:flex flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors items-center justify-center"
+          aria-label="다음 리뷰"
+        >
+          <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
+        </button>
       </div>
 
-      {/* 오른쪽 버튼 */}
-      <button
-        onClick={nextReview}
-        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 p-3 rounded-full bg-white border border-gray-300 shadow-lg hover:bg-gray-50 transition-colors"
-        aria-label="다음 리뷰"
+      {/* PC: 하단 페이지네이션 도트 (모바일에서는 카드 안에 배치) */}
+      <div 
+        className="hidden sm:flex flex-row items-center px-[27px] py-4 gap-4 bg-[#F8F8FB] rounded-[30px] mt-8"
+        style={{ width: '144px', height: '46px' }}
       >
-        <ChevronRight className="w-6 h-6 text-gray-600" />
-      </button>
-
-      {/* 인디케이터 */}
-      <div className="flex items-center justify-center gap-2 mt-6">
-        {Array.from({ length: itemsPerPage === 2 ? maxIndex + 1 : reviews.length }).map((_, index) => (
+        {reviews.map((_, idx) => (
           <button
-            key={index}
-            onClick={() => setCurrentIndex(index)}
+            key={idx}
+            onClick={() => setCurrentIndex(idx)}
             className={`w-2 h-2 rounded-full transition-colors ${
-              index === currentIndex ? 'bg-gray-900' : 'bg-gray-300'
+              idx === currentIndex
+                ? 'bg-[#FF496D]'
+                : 'bg-gray-300'
             }`}
-            aria-label={`리뷰 ${index + 1}로 이동`}
+            aria-label={`리뷰 ${idx + 1}로 이동`}
           />
         ))}
       </div>
     </div>
   );
 }
-
