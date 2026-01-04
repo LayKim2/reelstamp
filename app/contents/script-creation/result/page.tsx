@@ -694,15 +694,21 @@ function ScriptResultContent() {
             return (
               <div
                 key={segment.id}
-                className="fixed bg-white border border-[#EDEDF1] rounded-xl shadow-lg p-4 w-64 z-[9999]"
+                className="fixed bg-white border border-[#EDEDF1] rounded-xl shadow-lg z-[9999]"
                 style={{
+                  position: 'absolute',
+                  width: '258px',
+                  height: '72px',
                   top: `${pos.top}px`,
                   left: `${pos.left}px`,
                   transform: 'translateY(-100%)',
                   marginTop: '-8px',
+                  padding: '12px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
                 }}
               >
-                <div className="text-[12px] text-[#373A46] leading-relaxed">
+                <div className="text-[12px] text-[#373A46] leading-relaxed overflow-hidden text-ellipsis line-clamp-3">
                   {segment.designReason}
                 </div>
                 {/* 말풍선 꼬리 (아래쪽, 아이콘을 가리킴) */}
