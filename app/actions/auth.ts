@@ -103,6 +103,37 @@ export async function logoutAction(): Promise<{ success: boolean; message: strin
 }
 
 /**
+ * 회원탈퇴: 현재 사용자 계정을 삭제합니다.
+ */
+export async function deleteAccountAction(): Promise<{
+  success: boolean;
+  message: string;
+}> {
+  try {
+    const { getServerApiClient } = await import('@/app/lib/api/server-client');
+    const apiClient = await getServerApiClient();
+    
+    await apiClient.delete('/api/user/me');
+    
+    // 계정 삭제 성공 시 쿠키에서 토큰 제거
+    const { cookies } = await import('next/headers');
+    const cookieStore = await cookies();
+    cookieStore.delete('accessToken');
+    cookieStore.delete('refreshToken');
+    
+    return {
+      success: true,
+      message: '계정이 삭제되었습니다.',
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.response?.data?.message || '계정 삭제 중 오류가 발생했습니다.',
+    };
+  }
+}
+
+/**
  * 구독 상태 조회: 현재 사용자의 구독 정보를 가져옵니다.
  */
 export async function getSubscriptionStatusAction(): Promise<{

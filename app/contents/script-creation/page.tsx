@@ -2,19 +2,21 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, Video, Sparkles, X, Paperclip, Loader2, RefreshCw } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import Modal from '@/app/components/ui/Modal';
+import { Video, X, Paperclip, Loader2, RefreshCw, HelpCircle } from 'lucide-react';
+import { useRouter, usePathname } from 'next/navigation';
 import LoadingOverlay from '@/app/components/ui/LoadingOverlay';
-import Image from 'next/image';
 import { useGenerateScript } from '@/app/hooks/useGenerateScript';
 import { REEL_CATEGORY_MAP, REEL_LENGTH_MAP, REEL_CATEGORY_OPTIONS, REEL_LENGTH_OPTIONS } from '@/app/lib/constants/reels-creation';
 import { ReelScriptRequest } from '@/app/types/reels-creation';
+import { useAuth } from '@/app/components/providers/AuthProvider';
 
 export default function ScriptCreationPage() {
   const router = useRouter();
-  const { mutate: generateScript, data: generatedData, isPending, error: apiError, reset: resetApi } = useGenerateScript();
+  const pathname = usePathname();
+  const { isAuthenticated } = useAuth();
+  const { mutate: generateScript, data: generatedData, reset: resetApi } = useGenerateScript();
 
   // 폼 상태 관리
   const [category, setCategory] = useState('');
@@ -25,16 +27,18 @@ export default function ScriptCreationPage() {
   const [isAdditionalOpen, setIsAdditionalOpen] = useState(false);
   const [videoFiles, setVideoFiles] = useState<File[]>([]);
   const [videoPreviewUrls, setVideoPreviewUrls] = useState<string[]>([]);
+  const [hoverTooltip, setHoverTooltip] = useState<string | null>(null);
+  const [tooltipPosition, setTooltipPosition] = useState<{ [key: string]: { top: number; left: number } }>({});
+  const [mounted, setMounted] = useState(false);
+  const [clickedTooltip, setClickedTooltip] = useState<string | null>(null); // 모바일 클릭 상태
+  const tooltipRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   
   // 제출 상태
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<number | undefined>(undefined);
   const [loadingText, setLoadingText] = useState('생성 중...');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const formRef = useRef<HTMLFormElement>(null);
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
   const additionalContentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -58,6 +62,59 @@ export default function ScriptCreationPage() {
       videoPreviewUrls.forEach((url) => URL.revokeObjectURL(url));
     };
   }, [videoPreviewUrls]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // tooltip 위치 계산
+  useEffect(() => {
+    const activeTooltip = hoverTooltip || clickedTooltip;
+    if (!activeTooltip) {
+      setTooltipPosition({});
+      return;
+    }
+
+    const updateTooltipPosition = () => {
+      const element = tooltipRefs.current[activeTooltip];
+      if (!element) return;
+
+      const rect = element.getBoundingClientRect();
+      setTooltipPosition({
+        [activeTooltip]: {
+          top: rect.top - 8,
+          left: rect.left - 10,
+        },
+      });
+    };
+
+    updateTooltipPosition();
+    const timer = setTimeout(updateTooltipPosition, 50);
+    
+    window.addEventListener('scroll', updateTooltipPosition, true);
+    window.addEventListener('resize', updateTooltipPosition);
+    
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('scroll', updateTooltipPosition, true);
+      window.removeEventListener('resize', updateTooltipPosition);
+    };
+  }, [hoverTooltip, clickedTooltip]);
+
+  // 모바일: 외부 클릭 시 tooltip 닫기
+  useEffect(() => {
+    if (!clickedTooltip) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const element = tooltipRefs.current[clickedTooltip];
+      if (element && !element.contains(e.target as Node)) {
+        setClickedTooltip(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [clickedTooltip]);
 
   // 파일 선택 핸들러
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -93,6 +150,16 @@ export default function ScriptCreationPage() {
   // 제출 핸들러
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // 로그인 인증 체크
+    if (!isAuthenticated) {
+      // 현재 경로를 저장하고 로그인 페이지로 리다이렉트
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('previousPath', pathname);
+      }
+      router.push('/login');
+      return;
+    }
     
     // 카테고리 필수 체크
     if (!category) {
@@ -161,22 +228,34 @@ export default function ScriptCreationPage() {
         <div className="flex justify-center">
           {/* 입력 폼 영역 */}
           <div className="w-full max-w-2xl">
-            <form ref={formRef} onSubmit={handleSubmit} className="bg-white border-2 border-gray-200 rounded-3xl shadow-xl p-6 sm:p-8 space-y-6">
+            <form onSubmit={handleSubmit} className="bg-white border-2 border-gray-200 rounded-3xl shadow-xl p-6 sm:p-8 space-y-6">
               {/* 카테고리 */}
               <div>
-                <label className="block text-base font-bold text-gray-900 mb-2.5">
-                  카테고리 <span className="text-red-500">*</span>
+                <label className="flex items-center gap-2 text-base font-bold text-gray-900 mb-2.5">
+                  <span>카테고리 <span className="text-red-500">*</span></span>
+                  <div 
+                    ref={(el) => { tooltipRefs.current['category-help'] = el; }}
+                    className="flex-shrink-0"
+                    onMouseEnter={() => setHoverTooltip('category-help')}
+                    onMouseLeave={() => setHoverTooltip(null)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setClickedTooltip(clickedTooltip === 'category-help' ? null : 'category-help');
+                    }}
+                  >
+                    <HelpCircle className={`w-4 h-4 transition-all ${(hoverTooltip === 'category-help' || clickedTooltip === 'category-help') ? 'text-gray-900' : 'text-gray-400'}`} />
+                  </div>
                 </label>
                 {/* PC: 전체 너비에 맞게 4개 그리드, 모바일: 가로 스크롤 */}
-                <div className="hidden lg:grid lg:grid-cols-4 gap-3">
+                <div className="hidden lg:grid lg:grid-cols-4 gap-3 pt-2">
                   {REEL_CATEGORY_OPTIONS.map((option) => (
                     <button
                       key={option}
                       type="button"
                       onClick={() => setCategory(option)}
-                      className={`px-4 py-3 rounded-xl text-base font-medium transition-all ${
+                      className={`relative px-4 py-3 rounded-xl text-base font-medium transition-all ${
                         category === option
-                          ? 'bg-gradient-to-r from-[#EB48B1] to-[#F59A39] text-white shadow-lg scale-105'
+                          ? 'bg-[#FF6B8A] text-white shadow-lg scale-105'
                           : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-gray-300'
                       }`}
                     >
@@ -185,16 +264,16 @@ export default function ScriptCreationPage() {
                   ))}
                 </div>
                 {/* 모바일: 가로 스크롤 */}
-                <div className="lg:hidden overflow-x-auto pb-2 -mx-4 px-4" style={{ scrollbarWidth: 'thin' }}>
+                <div className="lg:hidden overflow-x-auto pb-4 pt-2 -mx-4 px-4 pr-8" style={{ scrollbarWidth: 'thin' }}>
                   <div className="flex gap-3 min-w-max">
                     {REEL_CATEGORY_OPTIONS.map((option) => (
                       <button
                         key={option}
                         type="button"
                         onClick={() => setCategory(option)}
-                        className={`px-4 py-3 rounded-xl text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 ${
+                        className={`relative px-4 py-3 rounded-xl text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 ${
                           category === option
-                            ? 'bg-gradient-to-r from-[#EB48B1] to-[#F59A39] text-white shadow-lg scale-105'
+                            ? 'bg-[#FF6B8A] text-white shadow-lg scale-105'
                             : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-gray-300'
                         }`}
                       >
@@ -216,7 +295,7 @@ export default function ScriptCreationPage() {
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
                   placeholder="만들고자 하는 영상 주제를 입력해주세요"
-                  className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#EB48B1] focus:ring-4 focus:ring-pink-100 text-base text-gray-900 placeholder:text-base placeholder:text-gray-400 transition-all shadow-sm"
+                  className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#FF6B8A] focus:ring-4 focus:ring-pink-100 text-base text-gray-900 placeholder:text-base placeholder:text-gray-400 transition-all shadow-sm"
                   required
                 />
               </div>
@@ -237,7 +316,7 @@ export default function ScriptCreationPage() {
                     }}
                     rows={4}
                     placeholder="릴스에 담고 싶은 내용을 자유롭게 작성해주세요.&#10;구체적일수록 나만의 컨셉이 반영된 기획과 대본이 제공됩니다."
-                    className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#EB48B1] focus:ring-4 focus:ring-pink-100 resize-none overflow-hidden text-base text-gray-900 placeholder:text-base placeholder:text-gray-400 transition-all shadow-sm"
+                    className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#FF6B8A] focus:ring-4 focus:ring-pink-100 resize-none overflow-hidden text-base text-gray-900 placeholder:text-base placeholder:text-gray-400 transition-all shadow-sm"
                     required
                   />
                   <div className="absolute bottom-3 right-3 text-xs text-gray-400">
@@ -261,10 +340,10 @@ export default function ScriptCreationPage() {
                 />
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full px-4 py-4 bg-white border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-[#EB48B1] hover:bg-pink-50/30 transition-all group"
+                  className="w-full px-4 py-4 bg-white border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-[#FF6B8A] hover:bg-pink-50/30 transition-all group"
                 >
                   <div className="flex items-center justify-center gap-3">
-                    <Paperclip className="w-5 h-5 text-gray-400 group-hover:text-[#EB48B1] transition-colors" />
+                    <Paperclip className="w-5 h-5 text-gray-400 group-hover:text-[#FF6B8A] transition-colors" />
                     <span className="text-base text-gray-600 group-hover:text-gray-900">
                       {videoFiles.length > 0 
                         ? `${videoFiles.length}개 파일 선택됨`
@@ -349,7 +428,7 @@ export default function ScriptCreationPage() {
                                 onClick={() => setVideoLength(option)}
                                 className={`px-4 py-3 rounded-xl text-base font-medium transition-all ${
                                   videoLength === option
-                                    ? 'bg-gradient-to-r from-[#EB48B1] to-[#F59A39] text-white shadow-lg scale-105'
+                                    ? 'bg-[#FF6B8A] text-white shadow-lg scale-105'
                                     : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-gray-300'
                                 }`}
                               >
@@ -374,7 +453,7 @@ export default function ScriptCreationPage() {
                             }}
                             rows={4}
                             placeholder="릴스에 추가로 담고 싶은 내용, 영상 소스, 또는 컨셉이 있다면 작성해주세요."
-                            className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#EB48B1] focus:ring-4 focus:ring-pink-100 resize-none overflow-hidden text-base text-gray-900 placeholder:text-base placeholder:text-gray-400 transition-all shadow-sm"
+                            className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#FF6B8A] focus:ring-4 focus:ring-pink-100 resize-none overflow-hidden text-base text-gray-900 placeholder:text-base placeholder:text-gray-400 transition-all shadow-sm"
                           />
                         </div>
                       </div>
@@ -394,7 +473,7 @@ export default function ScriptCreationPage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full px-6 py-4 bg-gradient-to-r from-[#EB48B1] to-[#F59A39] text-white font-bold rounded-xl hover:from-[#D93D9F] hover:to-[#E6892F] transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 h-[56px]"
+                className="w-full px-6 py-4 bg-[#FF6B8A] text-white font-bold rounded-xl hover:bg-[#FF5A7A] transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 h-[56px]"
               >
                 {isSubmitting ? (
                   <>
@@ -418,8 +497,29 @@ export default function ScriptCreationPage() {
       </div>
 
       {/* 로딩 오버레이 */}
-      <LoadingOverlay isVisible={isSubmitting} text={loadingText} progress={uploadProgress} />
+      <LoadingOverlay isVisible={isSubmitting} text={loadingText} />
 
+      {/* Tooltip Portal (PC hover용 말풍선) */}
+      {mounted && createPortal(
+        <>
+          {(hoverTooltip === 'category-help' || clickedTooltip === 'category-help') && tooltipPosition['category-help'] && (
+            <div
+              className="fixed z-[9999] bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg"
+              style={{
+                top: `${tooltipPosition['category-help'].top}px`,
+                left: `${tooltipPosition['category-help'].left}px`,
+                transform: 'translateY(-100%)',
+              }}
+            >
+              <div className="whitespace-nowrap">• 지식·정보: 재테크, 경제, 인물, 사건, 레시피 등</div>
+              <div className="whitespace-nowrap">• 리뷰·소개: 맛집, 카페, 제품, 장소, 드라마, 예능 등</div>
+              {/* 말풍선 꼬리 (아래쪽, 왼쪽 - 아이콘 바로 위) */}
+              <div className="absolute bottom-0 left-4 translate-y-full w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-transparent border-t-gray-900"></div>
+            </div>
+          )}
+        </>,
+        document.body
+      )}
     </div>
   );
 }

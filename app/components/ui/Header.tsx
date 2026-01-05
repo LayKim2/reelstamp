@@ -29,6 +29,11 @@ const MENU_ITEMS: MenuItem[] = [
     href: '/ranking',
     label: '인기 급상승 릴스',
   },
+  {
+    href: '/account/upgrade',
+    label: '요금제',
+    matchPattern: (pathname) => pathname.startsWith('/account/upgrade'),
+  },
 ];
 
 // 헤더 컴포넌트
@@ -79,6 +84,22 @@ export default function Header() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // 모바일 메뉴 열림/닫힘 시 body 스크롤 제어
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      // 메뉴가 열렸을 때: body 스크롤 잠금
+      document.body.style.overflow = 'hidden';
+    } else {
+      // 메뉴가 닫혔을 때: body 스크롤 복원
+      document.body.style.overflow = 'unset';
+    }
+    
+    return () => {
+      // 컴포넌트 언마운트 시 스크롤 복원
+      document.body.style.overflow = 'unset';
+    };
+  }, [isMobileMenuOpen]);
 
   // 프로필 메뉴 외부 클릭 시 닫기
   useEffect(() => {
@@ -140,23 +161,20 @@ export default function Header() {
           </div>
 
           {/* 중앙: 메뉴 영역 (PC) */}
-          <nav className="hidden md:flex items-center gap-8">
+          <nav className="hidden md:flex items-center gap-12">
             {MENU_ITEMS.map((item) => {
               const active = isActive(item);
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`text-base font-medium transition-all relative ${
+                  className={`text-lg transition-colors ${
                     active
-                      ? 'text-transparent bg-clip-text bg-gradient-to-r from-[#EB48B1] to-[#F59A39] font-bold scale-105'
-                      : 'text-gray-700 hover:text-gray-900'
+                      ? 'text-[#FF496D] font-extrabold'
+                      : 'text-gray-700 hover:text-gray-900 font-medium'
                   }`}
                 >
                   {item.label}
-                  {active && (
-                    <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-[#EB48B1] to-[#F59A39] rounded-full"></span>
-                  )}
                 </Link>
               );
             })}
@@ -260,16 +278,6 @@ export default function Header() {
 
                         {/* 메뉴 항목 */}
                         <div className="py-2">
-                          <button
-                            onClick={() => {
-                              setIsProfileMenuOpen(false);
-                              // Upgrade plan 기능 구현 필요
-                            }}
-                            className="w-full px-4 py-3 flex items-center gap-3 text-left text-gray-700 hover:bg-gray-50 transition-colors"
-                          >
-                            <Sparkles className="w-5 h-5 text-gray-400" />
-                            <span className="text-base font-medium">Upgrade plan</span>
-                          </button>
 
                           <button
                             onClick={() => {
@@ -341,131 +349,126 @@ export default function Header() {
       {mounted && createPortal(
         <AnimatePresence>
           {isMobileMenuOpen && (
-            <motion.div
-              className="fixed top-[72px] left-0 right-0 bottom-0 z-[9999] bg-white md:hidden"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <nav className="h-full flex flex-col overflow-y-auto">
-                {/* 로그인 상태: 유저 정보 섹션 (클릭 가능) */}
-                {isAuthenticated && user && (
-                  <Link
-                    href="/account"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="px-6 pt-6 pb-4 bg-gray-50 border-b border-gray-200 hover:bg-gray-100 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 bg-gray-100 border-2 border-gray-200">
-                        {user.profileImageUrl ? (
-                          <Image
-                            src={user.profileImageUrl}
-                            alt="프로필"
-                            width={56}
-                            height={56}
-                            className="w-full h-full object-cover"
-                            unoptimized
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-pink-200 to-orange-200">
-                            <span className="text-xl font-semibold text-gray-700">
-                              {user.nickname?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-base font-semibold text-gray-900 truncate">
-                          {user.nickname || user.socialNickname || '사용자'}
-                        </p>
-                        {user.email && (
-                          <p className="text-sm text-gray-500 truncate">{user.email}</p>
-                        )}
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                    </div>
-                  </Link>
-                )}
-
-                <div className="flex-1 flex flex-col p-6">
-                  {/* 메뉴 항목 */}
-                  <div className="flex flex-col space-y-2 mb-4">
-                    {MENU_ITEMS.map((item) => {
-                      const active = isActive(item);
-                      return (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          onClick={() => setIsMobileMenuOpen(false)}
-                          className={`w-full block px-5 py-3.5 text-base font-medium rounded-xl transition-all relative ${
-                            active
-                              ? 'bg-gradient-to-r from-[#EB48B1]/10 to-[#F59A39]/10 font-bold shadow-sm'
-                              : 'text-gray-900 hover:bg-gray-50 hover:shadow-sm'
-                          }`}
-                        >
-                          <span className={active ? 'bg-gradient-to-r from-[#EB48B1] to-[#F59A39] bg-clip-text text-transparent' : ''}>
-                            {item.label}
-                          </span>
-                          {active && (
-                            <span className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#EB48B1] to-[#F59A39] rounded-r-full"></span>
+              <motion.div
+                className="fixed top-[72px] left-0 right-0 bottom-0 z-[9999] bg-white md:hidden"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <nav className="h-full flex flex-col overflow-y-auto">
+                  {/* 로그인 상태: 유저 정보 섹션 (클릭 시 Settings 모달 열기) */}
+                  {isAuthenticated && user && (
+                    <button
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        setIsSettingsOpen(true);
+                      }}
+                      className="w-full px-6 pt-6 pb-4 bg-gray-50 border-b border-gray-200 hover:bg-gray-100 transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 bg-gray-100 border-2 border-gray-200">
+                          {user.profileImageUrl ? (
+                            <Image
+                              src={user.profileImageUrl}
+                              alt="프로필"
+                              width={56}
+                              height={56}
+                              className="w-full h-full object-cover"
+                              unoptimized
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-pink-200 to-orange-200">
+                              <span className="text-xl font-semibold text-gray-700">
+                                {user.nickname?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
+                              </span>
+                            </div>
                           )}
-                        </Link>
-                      );
-                    })}
-                  </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-base font-semibold text-gray-900 truncate">
+                            {user.nickname || user.socialNickname || '사용자'}
+                          </p>
+                          {user.email && (
+                            <p className="text-sm text-gray-500 truncate">{user.email}</p>
+                          )}
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                      </div>
+                    </button>
+                  )}
 
-                  {/* 화면 맨 밑에 버튼 배치 */}
-                  <div className="w-full flex flex-col gap-3 mt-auto pt-6">
-                    {isAuthenticated ? (
-                      // 로그인 상태: 로그아웃 버튼
-                      <button
+                  <div className="flex-1 flex flex-col p-6">
+                    <div className="flex flex-col space-y-2">
+                      {MENU_ITEMS.map((item) => {
+                        const active = isActive(item);
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={() => setIsMobileMenuOpen(false)}
+                              className={`w-full block px-5 py-3.5 text-lg rounded-xl transition-colors ${
+                                active
+                                  ? 'text-[#FF496D] font-extrabold bg-[#FF496D]/10 shadow-sm'
+                                  : 'text-gray-900 font-medium hover:bg-gray-50'
+                              }`}
+                          >
+                            {item.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                    {/* 화면 맨 밑에 버튼 배치 */}
+                    <div className="w-full flex flex-col gap-3 mt-auto pt-6">
+                      {isAuthenticated ? (
+                    // 로그인 상태: 로그아웃 버튼
+                    <button
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        handleLogout();
+                      }}
+                      disabled={isLoggingOut}
+                      className="w-full px-5 py-2 text-base font-medium text-white rounded-xl transition-all hover:bg-[#1F2128] hover:shadow-lg text-center disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ backgroundColor: '#2B2D37' }}
+                      aria-label="로그아웃"
+                    >
+                      {isLoggingOut ? '로그아웃 중...' : '로그아웃'}
+                    </button>
+                  ) : (
+                    // 비로그인 상태: 가입, 로그인 버튼
+                    <>
+                      <Link
+                        href="/login"
                         onClick={() => {
                           setIsMobileMenuOpen(false);
-                          handleLogout();
+                          if (typeof window !== 'undefined') {
+                            sessionStorage.setItem('previousPath', pathname);
+                          }
                         }}
-                        disabled={isLoggingOut}
-                        className="w-full px-5 py-2 text-base font-medium text-white rounded-xl transition-all hover:bg-[#1F2128] hover:shadow-lg text-center disabled:opacity-50 disabled:cursor-not-allowed"
-                        style={{ backgroundColor: '#2B2D37' }}
-                        aria-label="로그아웃"
+                        className="w-full px-5 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all border border-gray-300 text-center"
+                        aria-label="회원가입"
                       >
-                        {isLoggingOut ? '로그아웃 중...' : '로그아웃'}
-                      </button>
-                    ) : (
-                      // 비로그인 상태: 가입, 로그인 버튼
-                      <>
-                        <Link
-                          href="/login"
-                          onClick={() => {
-                            setIsMobileMenuOpen(false);
-                            if (typeof window !== 'undefined') {
-                              sessionStorage.setItem('previousPath', pathname);
-                            }
-                          }}
-                          className="w-full px-5 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all border border-gray-300 text-center"
-                          aria-label="회원가입"
-                        >
-                          가입
-                        </Link>
-                        <Link
-                          href="/login"
-                          onClick={() => {
-                            setIsMobileMenuOpen(false);
-                            if (typeof window !== 'undefined') {
-                              sessionStorage.setItem('previousPath', pathname);
-                            }
-                          }}
-                          className="w-full px-5 py-2 text-base font-medium text-white rounded-xl transition-all hover:bg-[#1F2128] hover:shadow-lg text-center"
-                          style={{ backgroundColor: '#2B2D37' }}
-                          aria-label="로그인"
-                        >
-                          로그인
-                        </Link>
-                      </>
-                    )}
+                        가입
+                      </Link>
+                      <Link
+                        href="/login"
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          if (typeof window !== 'undefined') {
+                            sessionStorage.setItem('previousPath', pathname);
+                          }
+                        }}
+                        className="w-full px-5 py-2 text-base font-medium text-white rounded-xl transition-all hover:bg-[#1F2128] hover:shadow-lg text-center"
+                        style={{ backgroundColor: '#2B2D37' }}
+                        aria-label="로그인"
+                      >
+                        로그인
+                      </Link>
+                    </>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </nav>
+                </nav>
             </motion.div>
           )}
         </AnimatePresence>,

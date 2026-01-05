@@ -4,10 +4,11 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import { X, User, Sparkles, RefreshCw, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from '@/app/components/providers/AuthProvider';
-import { getSubscriptionStatusAction } from '@/app/actions/auth';
+import { getSubscriptionStatusAction, deleteAccountAction } from '@/app/actions/auth';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -24,12 +25,14 @@ interface SubscriptionData {
 }
 
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
-  const { user } = useAuth();
+  const router = useRouter();
+  const { user, logout } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [isFreePlan, setIsFreePlan] = useState(true);
   const [subscriptionData, setSubscriptionData] = useState<SubscriptionData | null>(null);
   const [isLoadingSubscription, setIsLoadingSubscription] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -79,11 +82,30 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   if (!mounted) return null;
 
-  const handleDeleteAccount = () => {
-    // TODO: 계정 삭제 API 호출
-    console.log('계정 삭제');
-    setShowDeleteConfirm(false);
-    onClose();
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      const result = await deleteAccountAction();
+      
+      if (result.success) {
+        // 계정 삭제 성공 시 팝업 닫기
+        setShowDeleteConfirm(false);
+        onClose();
+        // 로그아웃 처리 및 홈으로 리다이렉트
+        await logout();
+        router.push('/');
+      } else {
+        // 에러 메시지 표시
+        alert(result.message || '계정 삭제 중 오류가 발생했습니다.');
+        setIsDeleting(false);
+        setShowDeleteConfirm(false);
+      }
+    } catch (error) {
+      console.error('계정 삭제 실패:', error);
+      alert('계정 삭제 중 오류가 발생했습니다.');
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
   };
 
   // 날짜 포맷팅 함수
@@ -248,20 +270,29 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                           <div className="flex items-center gap-2 flex-shrink-0">
                             <button
                               onClick={handleDeleteAccount}
-                              className="px-3 sm:px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors"
+                              disabled={isDeleting}
+                              className="px-3 sm:px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                               style={{ backgroundColor: '#8B2635' }}
                               onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = '#6B1A25';
+                                if (!isDeleting) {
+                                  e.currentTarget.style.backgroundColor = '#6B1A25';
+                                }
                               }}
                               onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = '#8B2635';
+                                if (!isDeleting) {
+                                  e.currentTarget.style.backgroundColor = '#8B2635';
+                                }
                               }}
                             >
-                              확인
+                              {isDeleting ? '처리 중...' : '확인'}
                             </button>
                             <button
-                              onClick={() => setShowDeleteConfirm(false)}
-                              className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                              onClick={() => {
+                                setShowDeleteConfirm(false);
+                                setIsDeleting(false);
+                              }}
+                              disabled={isDeleting}
+                              className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               취소
                             </button>

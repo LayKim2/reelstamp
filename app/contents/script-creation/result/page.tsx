@@ -490,7 +490,7 @@ function ScriptResultContent() {
                         <div className="flex gap-2">
                           <button
                             onClick={handleApplyModification}
-                            className="flex-1 px-4 py-2.5 bg-[#373A46] text-white text-xs font-bold rounded-xl hover:bg-[#2A2C35] transition-all shadow-md active:scale-95"
+                            className="flex-1 px-4 py-2.5 bg-[#FF496D] text-white text-xs font-bold rounded-xl hover:bg-[#E63E62] transition-all shadow-md active:scale-95"
                           >
                             네, 부탁해요
                           </button>
@@ -604,7 +604,7 @@ function ScriptResultContent() {
                     <div className="flex gap-2">
                       <button
                         onClick={handleApplyModification}
-                        className="flex-1 px-4 py-2.5 bg-[#373A46] text-white text-xs font-bold rounded-xl active:scale-95 transition-all"
+                        className="flex-1 px-4 py-2.5 bg-[#FF496D] text-white text-xs font-bold rounded-xl hover:bg-[#E63E62] transition-all active:scale-95"
                       >
                         네, 부탁해요
                       </button>

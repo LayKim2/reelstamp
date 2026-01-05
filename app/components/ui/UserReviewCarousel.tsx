@@ -25,25 +25,37 @@ export default function UserReviewCarousel() {
       name: '밤하늘',
       handle: '@nightsky_piano',
       youtubeViews: '5.6만',
-      instagramViews: '5904',
-      text: '릴스탬프 사용하고 조회수 처음으로 10만 달성했어요',
-      highlightedNumber: '10만',
+      instagramViews: '5953',
+      text: '릴스 대본부터 영상 구성까지 잡아주니 릴스 제작 시간이 크게 줄었어요. 앞으로 인스타를 활발히 운영할 예정이라 릴스탬프를 자주 활용할 것 같습니다!',
+      highlightedNumber: '',
+      profileImage: '/images/night_sky.jpg',
     },
     {
-      name: '김ㅇㅇ 사용자',
-      handle: '@hahahaha',
-      youtubeViews: '3.2만',
-      instagramViews: '4200',
-      text: '릴스탬프 사용 5일만에 1만 조회수 달성했어요!',
-      highlightedNumber: '1만',
+      name: '앱톤 APTONE',
+      handle: '@aptone_official',
+      youtubeViews: '',
+      instagramViews: '1.5만',
+      text: '브랜드 입장에서 인플루언서에게 제품 소개 영상을 요청할 때 릴스 제작 가이드에 대한 고민이 많았는데, 릴스탬프가 좋은 방향성을 제시해주었습니다.',
+      highlightedNumber: '',
+      profileImage: '/images/aptone.jpg',
     },
     {
-      name: '이ㅇㅇ 사용자',
-      handle: '@test123',
+      name: 'korean teacher',
+      handle: '@Koreanteacher_Sam',
+      youtubeViews: '',
+      instagramViews: '1.1만',
+      text: '주제별 최신 트렌드까지 파악할 수 있어서 크리에이터라면 꼭 사용해야할 서비스 같습니다~!',
+      highlightedNumber: '',
+      profileImage: '/images/korean_teacher.jpg',
+    },
+    {
+      name: '잭영',
+      handle: '@hongik_university',
       youtubeViews: '2.8만',
-      instagramViews: '3500',
-      text: '릴스탬프 추천받고 첫 릴스가 5만 조회수 달성!',
-      highlightedNumber: '5만',
+      instagramViews: '6380',
+      text: '릴스탬프를 사용하고 콘텐츠 제작 시간을 많이 단축했습니다! 덕분에 더 자주 업로드할 수 있을것 같아요.',
+      highlightedNumber: '',
+      profileImage: '/images/jack.jpg',
     },
   ];
 
@@ -104,39 +116,55 @@ export default function UserReviewCarousel() {
               {/* 왼쪽: 프로필 이미지 */}
               <div className="flex-shrink-0">
                 <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                  {/* 프로필 이미지가 들어갈 공간 */}
-                  <div className="w-full h-full bg-gradient-to-br from-blue-200 to-yellow-200"></div>
+                  {currentReview.profileImage ? (
+                    <Image
+                      src={currentReview.profileImage}
+                      alt={currentReview.name}
+                      width={96}
+                      height={96}
+                      className="w-full h-full object-cover"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-blue-200 to-yellow-200"></div>
+                  )}
                 </div>
               </div>
 
               {/* 모바일만: 오른쪽 아이디 및 조회수 정보 */}
-              <div className="flex-1 sm:hidden flex flex-col gap-2 justify-center items-center">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-bold text-gray-900">{currentReview.name}</h3>
-                  <p className="text-sm text-gray-500">{currentReview.handle}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1.5">
-                    <Image 
-                      src="/images/icon_youtube.svg" 
-                      alt="YouTube" 
-                      width={28} 
-                      height={28} 
-                      className="w-4 h-4"
-                    />
-                    <span className="text-base font-semibold text-gray-900">{currentReview.youtubeViews}</span>
+              <div className="flex-1 sm:hidden flex flex-col justify-center items-start w-full self-center">
+                {/* 이름과 조회수를 같은 줄에 배치 */}
+                <div className="flex items-center justify-between w-full gap-2">
+                  <h3 className="text-lg font-bold text-gray-700 text-left">{currentReview.name}</h3>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    {currentReview.youtubeViews && (
+                      <div className="flex items-center gap-1.5">
+                        <Image 
+                          src="/images/icon_youtube.svg" 
+                          alt="YouTube" 
+                          width={28} 
+                          height={28} 
+                          className="w-4 h-4"
+                        />
+                        <span className="text-base font-semibold text-gray-900">{currentReview.youtubeViews}</span>
+                      </div>
+                    )}
+                    {currentReview.instagramViews && (
+                      <div className="flex items-center gap-1.5">
+                        <Image 
+                          src="/images/icon_insta.svg" 
+                          alt="Instagram" 
+                          width={28} 
+                          height={28} 
+                          className="w-4 h-4"
+                        />
+                        <span className="text-base font-semibold text-gray-900">{currentReview.instagramViews}</span>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <Image 
-                      src="/images/icon_insta.svg" 
-                      alt="Instagram" 
-                      width={28} 
-                      height={28} 
-                      className="w-4 h-4"
-                    />
-                    <span className="text-base font-semibold text-gray-900">{currentReview.instagramViews}</span>
-                  </div>
                 </div>
+                {/* 아이디는 아래 줄 */}
+                <p className="text-sm text-gray-500 text-left mt-1">{currentReview.handle}</p>
               </div>
             </div>
 
@@ -150,33 +178,43 @@ export default function UserReviewCarousel() {
                 </div>
                 {/* 조회수 정보 - 오른쪽 끝 정렬 */}
                 <div className="flex items-center gap-4 flex-shrink-0">
-                  <div className="flex items-center gap-2">
-                    <Image 
-                      src="/images/icon_youtube.svg" 
-                      alt="YouTube" 
-                      width={28} 
-                      height={28} 
-                      className="w-5 h-5"
-                    />
-                    <span className="text-base font-semibold text-gray-900">{currentReview.youtubeViews}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Image 
-                      src="/images/icon_insta.svg" 
-                      alt="Instagram" 
-                      width={28} 
-                      height={28} 
-                      className="w-5 h-5"
-                    />
-                    <span className="text-base font-semibold text-gray-900">{currentReview.instagramViews}</span>
-                  </div>
+                  {currentReview.youtubeViews && (
+                    <div className="flex items-center gap-2">
+                      <Image 
+                        src="/images/icon_youtube.svg" 
+                        alt="YouTube" 
+                        width={28} 
+                        height={28} 
+                        className="w-5 h-5"
+                      />
+                      <span className="text-base font-semibold text-gray-900">{currentReview.youtubeViews}</span>
+                    </div>
+                  )}
+                  {currentReview.instagramViews && (
+                    <div className="flex items-center gap-2">
+                      <Image 
+                        src="/images/icon_insta.svg" 
+                        alt="Instagram" 
+                        width={28} 
+                        height={28} 
+                        className="w-5 h-5"
+                      />
+                      <span className="text-base font-semibold text-gray-900">{currentReview.instagramViews}</span>
+                    </div>
+                  )}
                 </div>
               </div>
               {/* 두 번째 줄: 메인 텍스트 (모바일/PC 모두) */}
-              <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-2 sm:mt-4">
-                {currentReview.text.split(currentReview.highlightedNumber)[0]}
-                <span className="text-[#FF496D]">{currentReview.highlightedNumber}</span>
-                {currentReview.text.split(currentReview.highlightedNumber)[1]}
+              <p className="text-base sm:text-xl text-gray-700 mt-2 sm:mt-4">
+                {currentReview.highlightedNumber ? (
+                  <>
+                    {currentReview.text.split(currentReview.highlightedNumber)[0]}
+                    <span className="text-[#FF496D]">{currentReview.highlightedNumber}</span>
+                    {currentReview.text.split(currentReview.highlightedNumber)[1]}
+                  </>
+                ) : (
+                  currentReview.text
+                )}
               </p>
 
               {/* 모바일: 페이지네이션 도트 (카드 내부) */}

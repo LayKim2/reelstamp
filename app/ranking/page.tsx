@@ -148,7 +148,7 @@ export default function RankingPage() {
           href={item.instagramUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#EB48B1] to-[#F59A39] text-white text-sm font-semibold rounded-lg hover:from-[#D93D9F] hover:to-[#E6892F] transition-all shadow-sm hover:shadow-md"
+          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#FF6B8A] text-white text-sm font-semibold rounded-lg hover:bg-[#FF5A7A] transition-all shadow-sm hover:shadow-md"
         >
           <Instagram className="w-4 h-4" />
           <span>Instagram</span>
@@ -202,7 +202,7 @@ export default function RankingPage() {
           href={item.instagramUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#EB48B1] to-[#F59A39] text-white text-sm font-semibold rounded-lg hover:from-[#D93D9F] hover:to-[#E6892F] transition-all shadow-sm hover:shadow-md"
+          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#FF6B8A] text-white text-sm font-semibold rounded-lg hover:bg-[#FF5A7A] transition-all shadow-sm hover:shadow-md"
         >
           <Instagram className="w-4 h-4" />
           <span>Instagram</span>
@@ -258,7 +258,7 @@ export default function RankingPage() {
                   onClick={() => setSelectedCategory(category)}
                   className={`px-4 sm:px-6 py-2 rounded-full text-sm sm:text-base font-semibold transition-all whitespace-nowrap flex-shrink-0 ${
                     isSelected
-                      ? 'bg-gradient-to-r from-[#EB48B1] to-[#F59A39] text-white shadow-md'
+                      ? 'bg-[#FF6B8A] text-white shadow-md'
                       : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
                   }`}
                 >

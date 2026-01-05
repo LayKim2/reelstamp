@@ -35,9 +35,25 @@ export async function POST(request: NextRequest) {
       console.error('[Validation Error Details]', JSON.stringify(errorData.detail, null, 2));
     }
 
+    // 500 Internal Server Error의 경우 더 자세한 로깅
+    if (statusCode === 500) {
+      console.error('[500 Internal Server Error]', {
+        errorMessage: axiosError.message,
+        responseData: errorData,
+        requestUrl: axiosError.config?.url,
+        requestMethod: axiosError.config?.method,
+        requestHeaders: axiosError.config?.headers,
+      });
+    }
+
     // 외부 서버에서 보낸 에러 메시지나 Validation Error(422)를 그대로 전달
+    // 500 에러의 경우 사용자 친화적인 메시지 제공
+    const errorMessage = statusCode === 500 
+      ? { message: '서버에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.' }
+      : errorData || { message: '대본 생성 중 서버 오류가 발생했습니다.' };
+
     return NextResponse.json(
-      errorData || { message: '대본 생성 중 서버 오류가 발생했습니다.' },
+      errorMessage,
       { status: statusCode }
     );
   }

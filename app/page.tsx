@@ -95,10 +95,10 @@ export default function Home() {
                 transition={{ duration: 0.6, delay: 0.2, ease: 'easeOut' }}
               >
                 <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-700">
-                  밤새 고민하던 릴스 기획과 대본,
+                  밤새 고민하던 릴스 대본과 영상,
                 </p>
                 <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-700">
-                  이제 검증된 알고리즘 공식으로 1분 만에 끝내세요!
+                  이제 검증된 알고리즘 공식으로 1분 만에 만드세요!
                 </p>
               </motion.div>
 
@@ -201,7 +201,7 @@ export default function Home() {
             viewport={{ once: true, margin: '-100px' }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
           >
-            <p className="text-base sm:text-lg text-gray-600 mb-3">
+            <p className="text-xl sm:text-2xl text-gray-600 mb-3">
               열심히 만든 릴스, 왜 나만 안 터질까?
             </p>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight">
@@ -222,11 +222,11 @@ export default function Home() {
               transition={{ duration: 0.5, delay: 0.1 }}
             >
               <div className="relative bg-gray-100 rounded-2xl p-5 sm:p-6 w-[95%] sm:w-auto sm:max-w-[45%]">
-                <div className="text-sm sm:text-base text-gray-900 leading-relaxed">
+                <div className="text-base sm:text-lg text-gray-900 leading-relaxed font-semibold">
                   <div>초반 3초, 시청자가 화면을</div>
                   <div className="flex justify-between items-center">
                     <span>넘기지 않게 만드는 후킹이 있나요?</span>
-                    <span className="text-sm sm:text-base text-gray-500 font-medium ml-4 whitespace-nowrap">이탈 방지</span>
+                    <span className="text-base sm:text-lg text-gray-500 font-bold ml-4 whitespace-nowrap">이탈 방지</span>
                   </div>
                 </div>
                 {/* 말풍선 꼬리 (오른쪽) */}
@@ -242,12 +242,12 @@ export default function Home() {
               viewport={{ once: true, margin: '-50px' }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <div className="relative bg-gray-100 rounded-2xl p-5 sm:p-6 w-[95%] sm:w-auto sm:max-w-[55%]">
-                <div className="text-sm sm:text-base text-gray-900 leading-relaxed">
+              <div className="relative bg-gray-100 rounded-2xl p-5 sm:p-6 w-[95%] sm:w-auto sm:max-w-[60%]">
+                <div className="text-base sm:text-lg text-gray-900 leading-relaxed font-semibold">
                   <div>인기 릴스 수백 개를 넘겨봤지만,</div>
                   <div className="flex justify-between items-center">
                     <span>정작 내 영상에 바로 써먹을 소스는 못 찾으셨나요?</span>
-                    <span className="text-sm sm:text-base text-gray-500 font-medium ml-4 whitespace-nowrap">레퍼런스 분석</span>
+                    <span className="text-base sm:text-lg text-gray-500 font-bold ml-4 whitespace-nowrap">레퍼런스 분석</span>
                   </div>
                 </div>
                 {/* 말풍선 꼬리 (왼쪽) */}
@@ -264,11 +264,11 @@ export default function Home() {
               transition={{ duration: 0.5, delay: 0.3 }}
             >
               <div className="relative bg-gray-100 rounded-2xl p-5 sm:p-6 w-[95%] sm:w-auto sm:max-w-[48%]">
-                <div className="text-sm sm:text-base text-gray-900 leading-relaxed">
+                <div className="text-base sm:text-lg text-gray-900 leading-relaxed font-semibold">
                   <div>어떤 장면을 먼저 보여줘야 할지 몰라</div>
                   <div className="flex justify-between items-center">
                     <span>편집 프로그램 앞에서 시간만 허비하고 계신가요?</span>
-                    <span className="text-sm sm:text-base text-gray-500 font-medium ml-4 whitespace-nowrap">구성능력</span>
+                    <span className="text-base sm:text-lg text-gray-500 font-bold ml-4 whitespace-nowrap">구성능력</span>
                   </div>
                 </div>
                 {/* 말풍선 꼬리 (오른쪽) */}
@@ -285,11 +285,11 @@ export default function Home() {
               transition={{ duration: 0.5, delay: 0.4 }}
             >
               <div className="relative bg-gray-100 rounded-2xl p-5 sm:p-6 w-[95%] sm:w-auto sm:max-w-[52%]">
-                <div className="text-sm sm:text-base text-gray-900 leading-relaxed">
+                <div className="text-base sm:text-lg text-gray-900 leading-relaxed font-semibold">
                   <div>지금 내 분야에서 가장 뜨거운 트렌드를</div>
                   <div className="flex justify-between items-center">
                     <span>1분 만에 파악할 수 있나요?</span>
-                    <span className="text-sm sm:text-base text-gray-500 font-medium ml-4 whitespace-nowrap">트렌드 추적</span>
+                    <span className="text-base sm:text-lg text-gray-500 font-bold ml-4 whitespace-nowrap">트렌드 추적</span>
                   </div>
                 </div>
                 {/* 말풍선 꼬리 (왼쪽) */}
@@ -311,7 +311,7 @@ export default function Home() {
             viewport={{ once: true, margin: '-100px' }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
           >
-            <p className="text-sm sm:text-base text-gray-600 mb-3">
+            <p className="text-xl sm:text-2xl text-gray-600 mb-3">
               그래서 릴스탬프는<br className="sm:hidden" /> 잘나가는 릴스들에 숨겨진 공통점을 추출했습니다
             </p>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
@@ -321,7 +321,7 @@ export default function Home() {
 
           {/* 3개 기능 카드 */}
           <div className="flex flex-col md:flex-row justify-center items-start gap-6 lg:gap-8">
-            {/* 카드 1: 검증된 포맷 */}
+            {/* 카드 1: 100만뷰 구조 */}
             <motion.div 
               className="bg-gray-50 rounded-2xl p-6 sm:p-8 flex flex-col items-center text-center w-full md:w-auto md:min-w-[280px]"
               initial={{ opacity: 0, y: 30 }}
@@ -332,19 +332,19 @@ export default function Home() {
               <div className="w-40 h-40 sm:w-48 sm:h-48 mb-4 flex items-center justify-center">
                 <img 
                   src="/images/landing_AO1.svg" 
-                  alt="검증된 포맷" 
+                  alt="100만뷰 구조" 
                   className="w-full h-full object-contain"
                 />
               </div>
               <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-3">
-                검증된 포맷
+              100만뷰 구조
               </h3>
               <p className="text-sm sm:text-base text-gray-700 leading-relaxed whitespace-nowrap">
-                수만 개의 상위 노출 영상 분석 결과 반영
+                수만 개의 성공 릴스 데이터 반영
               </p>
             </motion.div>
 
-            {/* 카드 2: 후킹 마스터 */}
+            {/* 카드 2: 대본 마스터 */}
             <motion.div 
               className="bg-gray-50 rounded-2xl p-6 sm:p-8 flex flex-col items-center text-center w-full md:w-auto md:min-w-[280px] md:mt-8"
               initial={{ opacity: 0, y: 30 }}
@@ -355,15 +355,15 @@ export default function Home() {
               <div className="w-40 h-40 sm:w-48 sm:h-48 mb-4 flex items-center justify-center">
                 <img 
                   src="/images/landing_AO2.svg" 
-                  alt="후킹 마스터" 
+                  alt="대본 마스터" 
                   className="w-full h-full object-contain"
                 />
               </div>
               <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-3">
-                후킹 마스터
+                대본 마스터
               </h3>
               <p className="text-sm sm:text-base text-gray-700 leading-relaxed whitespace-nowrap">
-                시청자를 멈추게 할 강력한 오프닝 제안
+                시청자의 스크롤을 멈추게 할 대본
               </p>
             </motion.div>
 
@@ -405,7 +405,7 @@ export default function Home() {
               viewport={{ once: true, margin: '-100px' }}
               transition={{ duration: 0.6, ease: 'easeOut' }}
             >
-              <p className="text-base sm:text-lg text-gray-600 mb-2">
+              <p className="text-2xl sm:text-3xl text-gray-600 mb-2">
                 3시간의 고민을 10분의 확신으로
               </p>
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
@@ -443,7 +443,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* 헤더 */}
           <div className="text-center mb-12 sm:mb-16">
-            <p className="text-sm sm:text-base text-gray-600 mb-3">
+            <p className="text-xl sm:text-2xl text-gray-600 mb-3">
               조회수가 터지는 릴스, 이렇게 설계됩니다
             </p>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
@@ -507,7 +507,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* 헤더 */}
           <div className="text-center mb-12 sm:mb-16">
-            <p className="text-sm sm:text-base text-gray-600 mb-3">
+            <p className="text-xl sm:text-2xl text-gray-600 mb-3">
               성장을 위한 가장 확실한 투자
             </p>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
@@ -585,7 +585,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="flex flex-col items-center text-center space-y-6 sm:space-y-8">
             {/* 상단 텍스트 */}
-            <p className="text-base sm:text-lg text-gray-700">
+            <p className="text-xl sm:text-2xl text-gray-700">
               이미 N명의 크리에이터가{' '}
               <span className="sm:hidden"><br /></span>
               릴스탬프로 시간을 아끼고 있습니다

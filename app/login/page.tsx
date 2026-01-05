@@ -198,7 +198,7 @@ export default function LoginPage() {
         {/* 상단 텍스트 */}
         <div className="text-center">
           <p className="text-gray-700 text-lg mb-3 md:mb-6">
-            100만 릴스 제작 파트너
+            100만뷰 릴스 제작 파트너
           </p>
           
           {/* 메인 로고 */}
