@@ -6,9 +6,11 @@ export interface ReelScriptRequest {
   reel_type: 'information' | 'review' | 'vlog' | 'other';
   reel_topic: string;
   user_request: string;
+  user_id: number; 
   reel_length?: number | null;
   extra_request?: string | null;
   video?: File[] | null;
+  video_source_mode?: 'uploaded_only' | 'uploaded_plus_new' | 'no_video';
 }
 
 // 대본 세그먼트 타입 (타임라인별 구분)

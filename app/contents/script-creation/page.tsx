@@ -15,7 +15,7 @@ import { useAuth } from '@/app/components/providers/AuthProvider';
 export default function ScriptCreationPage() {
   const router = useRouter();
   const pathname = usePathname();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { mutate: generateScript, data: generatedData, reset: resetApi } = useGenerateScript();
 
   // 폼 상태 관리
@@ -27,6 +27,7 @@ export default function ScriptCreationPage() {
   const [isAdditionalOpen, setIsAdditionalOpen] = useState(false);
   const [videoFiles, setVideoFiles] = useState<File[]>([]);
   const [videoPreviewUrls, setVideoPreviewUrls] = useState<string[]>([]);
+  const [excludeRecommendedSources, setExcludeRecommendedSources] = useState(false); // 입력한 영상 외엔 영상 소스 추천받지 않기
   const [hoverTooltip, setHoverTooltip] = useState<string | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState<{ [key: string]: { top: number; left: number } }>({});
   const [mounted, setMounted] = useState(false);
@@ -152,7 +153,7 @@ export default function ScriptCreationPage() {
     e.preventDefault();
     
     // 로그인 인증 체크
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !user) {
       // 현재 경로를 저장하고 로그인 페이지로 리다이렉트
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('previousPath', pathname);
@@ -172,14 +173,22 @@ export default function ScriptCreationPage() {
     resetApi();
 
     try {
+      // video_source_mode 결정
+      let videoSourceMode: 'uploaded_only' | 'uploaded_plus_new' | 'no_video' = 'no_video';
+      if (videoFiles.length > 0) {
+        videoSourceMode = excludeRecommendedSources ? 'uploaded_only' : 'uploaded_plus_new';
+      }
+
       // API 요청 데이터 생성 (타입 안정성 확보)
       const request: ReelScriptRequest = {
         reel_type: REEL_CATEGORY_MAP[category] || 'information',
         reel_topic: topic,
         user_request: content,
+        user_id: user.id,
         reel_length: videoLength ? REEL_LENGTH_MAP[videoLength] : null,
         extra_request: additionalContent || null,
         video: videoFiles.length > 0 ? videoFiles : null,
+        video_source_mode: videoSourceMode,
       };
 
       setLoadingText('대본 생성 중...');
@@ -351,6 +360,22 @@ export default function ScriptCreationPage() {
                     </span>
                   </div>
                 </div>
+
+                {/* 체크박스: 입력한 영상 외엔 영상 소스 추천받지 않기 */}
+                {videoFiles.length > 0 && (
+                  <div className="mt-4 flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="excludeRecommendedSources"
+                      checked={excludeRecommendedSources}
+                      onChange={(e) => setExcludeRecommendedSources(e.target.checked)}
+                      className="w-4 h-4 text-[#FF6B8A] border-gray-300 rounded focus:ring-[#FF6B8A] focus:ring-2 cursor-pointer"
+                    />
+                    <label htmlFor="excludeRecommendedSources" className="text-sm text-gray-700 cursor-pointer">
+                      입력한 영상 외엔 영상 소스 추천받지 않기
+                    </label>
+                  </div>
+                )}
                 
                 {/* 영상 Preview */}
                 {videoPreviewUrls.length > 0 && (

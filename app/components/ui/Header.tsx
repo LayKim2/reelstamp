@@ -30,9 +30,9 @@ const MENU_ITEMS: MenuItem[] = [
     label: '인기 급상승 릴스',
   },
   {
-    href: '/account/upgrade',
+    href: '/pricing',
     label: '요금제',
-    matchPattern: (pathname) => pathname.startsWith('/account/upgrade'),
+    matchPattern: (pathname) => pathname.startsWith('/pricing'),
   },
 ];
 

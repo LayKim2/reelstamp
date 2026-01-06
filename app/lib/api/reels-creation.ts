@@ -12,6 +12,7 @@ export const createReelScriptFormData = (request: ReelScriptRequest): FormData =
   formData.append('reel_type', request.reel_type);
   formData.append('reel_topic', request.reel_topic);
   formData.append('user_request', request.user_request);
+  formData.append('user_id', String(request.user_id)); 
   
   if (request.reel_length !== null && request.reel_length !== undefined) {
     formData.append('reel_length', String(request.reel_length));
@@ -19,6 +20,10 @@ export const createReelScriptFormData = (request: ReelScriptRequest): FormData =
   
   if (request.extra_request) {
     formData.append('extra_request', request.extra_request);
+  }
+  
+  if (request.video_source_mode) {
+    formData.append('video_source_mode', request.video_source_mode);
   }
   
   // 모든 비디오 파일 전송 (배열로 전송)

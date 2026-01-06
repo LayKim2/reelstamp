@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import UserReviewCarousel from '@/app/components/ui/UserReviewCarousel';
+import { freePlanFeatures, basicPlanFeatures, proPlanFeatures, masterPlanFeatures, freePlanEventBenefit, basicPlanEventBenefit } from '@/app/lib/constants/plans';
+import PlanCard from '@/app/components/ui/PlanCard';
 
 export default function Home() {
   return (
@@ -516,15 +518,65 @@ export default function Home() {
           </div>
 
           {/* 플랜 카드 영역 */}
-          <div className="flex flex-col md:flex-row justify-center items-center gap-6 lg:gap-8">
-            {/* 플레이스홀더 카드 1 */}
-            <div className="w-full md:w-auto md:flex-1 max-w-md h-64 sm:h-80 bg-gray-100 rounded-2xl"></div>
-            
-            {/* 플레이스홀더 카드 2 */}
-            <div className="w-full md:w-auto md:flex-1 max-w-md h-64 sm:h-80 bg-gray-100 rounded-2xl"></div>
-            
-            {/* 플레이스홀더 카드 3 */}
-            <div className="w-full md:w-auto md:flex-1 max-w-md h-64 sm:h-80 bg-gray-100 rounded-2xl"></div>
+          <div className="flex flex-col lg:flex-row justify-center items-stretch gap-6 lg:gap-8">
+            {/* Free 플랜 카드 */}
+            <PlanCard
+              planName="Free"
+              price="₩0"
+              features={freePlanFeatures}
+              eventBenefit={freePlanEventBenefit}
+              buttonType="link"
+              buttonText="무료 플랜 시작하기"
+              buttonHref="/pricing"
+              buttonClassName="bg-gray-700 text-white hover:bg-gray-800"
+            />
+
+            {/* Basic 플랜 카드 */}
+            <PlanCard
+              planName="Basic"
+              price="₩4,900"
+              discountInfo={{
+                percentage: '75%',
+                originalPrice: '19,900원',
+              }}
+              features={basicPlanFeatures}
+              eventBenefit={basicPlanEventBenefit}
+              buttonType="link"
+              buttonText="구독하기"
+              buttonHref="/pricing"
+              buttonClassName="bg-[#FF496D] text-white hover:bg-[#E63E62]"
+            />
+
+            {/* Pro 플랜 카드 */}
+            <PlanCard
+              planName="Pro"
+              price="₩9,900"
+              discountInfo={{
+                percentage: '80%',
+                originalPrice: '49,900원',
+              }}
+              features={proPlanFeatures}
+              isPopular={true}
+              buttonType="link"
+              buttonText="구독하기"
+              buttonHref="/pricing"
+              buttonClassName="bg-[#FF496D] text-white hover:bg-[#E63E62]"
+            />
+
+            {/* Master 플랜 카드 */}
+            <PlanCard
+              planName="Master"
+              price="₩49,900"
+              discountInfo={{
+                percentage: '75%',
+                originalPrice: '199,900원',
+              }}
+              features={masterPlanFeatures}
+              buttonType="link"
+              buttonText="구독하기"
+              buttonHref="/pricing"
+              buttonClassName="bg-[#FF496D] text-white hover:bg-[#E63E62]"
+            />
           </div>
         </div>
       </section>
