@@ -64,6 +64,11 @@ export async function getServerApiClient(): Promise<AxiosInstance> {
 
   client.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
+      // FormData인 경우 Content-Type을 자동으로 설정하도록 제거
+      if (config.data instanceof FormData) {
+        delete config.headers['Content-Type'];
+      }
+
       try {
         const cookieStore = await cookies();
         const accessToken = cookieStore.get('accessToken')?.value;
@@ -185,6 +190,11 @@ export async function getServerAiApiClient(): Promise<AxiosInstance> {
 
   client.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
+      // FormData인 경우 Content-Type을 자동으로 설정하도록 제거
+      if (config.data instanceof FormData) {
+        delete config.headers['Content-Type'];
+      }
+
       try {
         const cookieStore = await cookies();
         const accessToken = cookieStore.get('accessToken')?.value;
