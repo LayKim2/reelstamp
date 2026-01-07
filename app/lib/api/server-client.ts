@@ -3,6 +3,7 @@ import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosError } from 'ax
 import { cookies } from 'next/headers';
 import { API_CONFIG } from '@/app/lib/constants/api';
 import { WebApiResponse, TokenInfo } from '@/app/lib/api/auth';
+import { setupInterceptors } from '@/app/lib/api/client';
 
 /**
  * 토큰 갱신 함수: refresh token을 사용하여 새로운 access token 발급
@@ -167,6 +168,40 @@ export async function getServerApiClient(): Promise<AxiosInstance> {
 
       return Promise.reject(error);
     }
+  );
+
+  return client;
+}
+
+/**
+ * 서버 사이드에서 사용할 AI API 클라이언트를 생성합니다. (8083 포트)
+ * httpOnly 쿠키에서 accessToken을 자동으로 추출하여 Authorization 헤더에 추가합니다.
+ */
+export async function getServerAiApiClient(): Promise<AxiosInstance> {
+  const client = axios.create({
+    baseURL: API_CONFIG.AI_BASE_URL,
+    timeout: API_CONFIG.TIMEOUT,
+  });
+
+  // 공통 인터셉터 설정 (로깅 등)
+  setupInterceptors(client, 'Server AI API');
+
+  client.interceptors.request.use(
+    async (config: InternalAxiosRequestConfig) => {
+      try {
+        const cookieStore = await cookies();
+        const accessToken = cookieStore.get('accessToken')?.value;
+
+        if (accessToken) {
+          config.headers.Authorization = `Bearer ${accessToken}`;
+        }
+      } catch (error) {
+        // 토큰 추출 실패 시 무시하고 진행
+      }
+
+      return config;
+    },
+    (error) => Promise.reject(error)
   );
 
   return client;

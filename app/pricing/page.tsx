@@ -23,6 +23,7 @@ export default function PricingPage() {
   const [subscriptionData, setSubscriptionData] = useState<SubscriptionData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isFreePlan, setIsFreePlan] = useState(true);
+  const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
 
   useEffect(() => {
     // 로그인되어 있을 때만 구독 상태 조회
@@ -50,6 +51,46 @@ export default function PricingPage() {
         setIsLoading(false);
       });
   }, [isAuthenticated]);
+
+  // 결제 요청 처리 함수
+  const handlePayment = async (planId: string, planName: string, price: number) => {
+    if (!isAuthenticated) {
+      router.push('/login');
+      return;
+    }
+
+    if (isPaymentProcessing) return;
+
+    try {
+      setIsPaymentProcessing(true);
+      
+      const response = await fetch('/api/payments/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          planId,
+          planName,
+          price,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.payurl) {
+        // PayApp 결제 페이지로 이동
+        window.location.href = data.payurl;
+      } else {
+        alert(data.message || '결제 요청 중 오류가 발생했습니다.');
+      }
+    } catch (error) {
+      console.error('Payment Error:', error);
+      alert('결제 시스템과 통신 중 오류가 발생했습니다.');
+    } finally {
+      setIsPaymentProcessing(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -87,16 +128,10 @@ export default function PricingPage() {
             eventBenefit={basicPlanEventBenefit}
             buttonType="button"
             buttonText={isAuthenticated && !isLoading && !isFreePlan && subscriptionData?.active ? '현재 플랜' : '구독하기'}
-            buttonOnClick={() => {
-              if (!isAuthenticated) {
-                router.push('/login');
-                return;
-              }
-              // Basic 플랜 구매 로직 (추후 구현)
-              alert('Basic 플랜 구매 기능은 곧 출시됩니다.');
-            }}
+            buttonOnClick={() => handlePayment('basic', 'Basic', 4900)}
             isCurrentPlan={isAuthenticated && !isLoading && !isFreePlan && subscriptionData?.active}
             buttonClassName="bg-[#FF496D] text-white hover:bg-[#E63E62]"
+            buttonDisabled={isPaymentProcessing}
           />
 
           {/* Pro 플랜 카드 */}
@@ -111,16 +146,10 @@ export default function PricingPage() {
             isPopular={true}
             buttonType="button"
             buttonText={isAuthenticated && !isLoading && subscriptionData?.active ? '현재 플랜' : '구독하기'}
-            buttonOnClick={() => {
-              if (!isAuthenticated) {
-                router.push('/login');
-                return;
-              }
-              // Pro 플랜 구매 로직 (추후 구현)
-              alert('Pro 플랜 구매 기능은 곧 출시됩니다.');
-            }}
+            buttonOnClick={() => handlePayment('pro', 'Pro', 9900)}
             isCurrentPlan={isAuthenticated && !isLoading && subscriptionData?.active}
             buttonClassName="bg-[#FF496D] text-white hover:bg-[#E63E62]"
+            buttonDisabled={isPaymentProcessing}
           />
 
           {/* Master 플랜 카드 */}
@@ -134,16 +163,10 @@ export default function PricingPage() {
             features={masterPlanFeatures}
             buttonType="button"
             buttonText={isAuthenticated && !isLoading && subscriptionData?.active ? '현재 플랜' : '구독하기'}
-            buttonOnClick={() => {
-              if (!isAuthenticated) {
-                router.push('/login');
-                return;
-              }
-              // Master 플랜 구매 로직 (추후 구현)
-              alert('Master 플랜 구매 기능은 곧 출시됩니다.');
-            }}
+            buttonOnClick={() => handlePayment('master', 'Master', 49900)}
             isCurrentPlan={isAuthenticated && !isLoading && subscriptionData?.active}
             buttonClassName="bg-[#FF496D] text-white hover:bg-[#E63E62]"
+            buttonDisabled={isPaymentProcessing}
           />
         </div>
       </div>

@@ -32,5 +32,47 @@ export interface ReelScriptResponse {
   templates: string[];
   script: string; // 전체 대본 (하위 호환성)
   segments?: ScriptSegment[]; // 타임라인별 세그먼트 (새 구조)
+  sessionId?: string; // 세션 ID (챗봇 대화 API에 필요)
+  revisionId?: string; // 리비전 ID (챗봇 대화 API에 필요)
+}
+
+// 챗봇 대화 요청 타입: 완성된 대본에 대해 챗봇으로 대화하기 위한 요청
+export interface ChatReelScriptRequest {
+  sessionId: string; // POST /ai/generate-reel-script의 response로 받은 sessionId
+  editRequest: string; // 사용자 메시지 (대본에 대한 질문이나 수정 요청)
+}
+
+// 대본 수정 적용 요청 타입 (전체 대본 업데이트)
+export interface ApplyReelScriptRequest {
+  sessionId: string;
+  parentRevisionId: string;
+  suggestedChange: string;
+}
+
+// 비디오 소스 맵 타입
+export interface VideoSourceMap {
+  label: string;
+  filename: string;
+}
+
+// 챗봇 대화 응답 타입: AI 챗봇의 대화 응답 (대본 데이터는 컨텍스트용, 실제 업데이트는 별도 API 사용)
+export interface ChatReelScriptResponse {
+  reelType: string;
+  reelLength: string;
+  finalLengthSeconds: number;
+  lengthReason: string;
+  sessionId: string;
+  revisionId: string;
+  groundingMetadata?: Record<string, unknown>;
+  groundingUsed: boolean;
+  videoSourceMap: VideoSourceMap[];
+  revisionStatus: string;
+  applyRequired: boolean;
+  templates: string[];
+  script: string;
+  segments?: ScriptSegment[]; // 타임라인별 세그먼트 (선택적)
+  revisionMode?: string; // "suggestion" 또는 기타
+  applyPromptType?: string;
+  suggestedChange?: string;
 }
 

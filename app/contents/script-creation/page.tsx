@@ -197,11 +197,9 @@ export default function ScriptCreationPage() {
       generateScript(request, {
         onSuccess: (data) => {
           setIsSubmitting(false);
-          // 생성된 데이터를 sessionStorage에 저장하고 결과 페이지로 이동
-          sessionStorage.setItem('generatedScript', JSON.stringify(data));
-          // 릴스 주제도 함께 저장
-          sessionStorage.setItem('reelTopic', topic);
-          router.push('/contents/script-creation/result');
+          
+          // sessionId를 쿼리 파라미터로 전달하여 이동
+          router.push(`/contents/script-creation/result?sessionId=${data.sessionId}`);
         },
         onError: (error: any) => {
           setIsSubmitting(false);

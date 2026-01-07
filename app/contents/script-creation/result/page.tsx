@@ -2,11 +2,13 @@
 'use client';
 
 import { useEffect, useState, Suspense } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, MessageSquare, ChevronDown, ChevronUp, Sparkles, Layout } from 'lucide-react';
+import { Send, ChevronDown, ChevronUp, Sparkles, Layout } from 'lucide-react';
 import Image from 'next/image';
-import { ReelScriptResponse, ScriptSegment } from '@/app/types/reels-creation';
+import { ReelScriptResponse, ScriptSegment, ChatReelScriptResponse } from '@/app/types/reels-creation';
+import { chatReelScript, getLatestReelScript, applyReelScript } from '@/app/lib/api/reels-creation';
+import * as XLSX from 'xlsx';
 
 // 헤더 컴포넌트 분리 (이미지 디자인의 독립된 박스 형태)
 const TableHeader = ({ title, className }: { title: string; className: string }) => (
@@ -32,46 +34,79 @@ export default function ScriptResultPage() {
 
 function ScriptResultContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [resultData, setResultData] = useState<ReelScriptResponse | null>(null);
   const [reelTopic, setReelTopic] = useState<string>(''); // 릴스 주제
   const [chatMessage, setChatMessage] = useState('');
+  
+  // URL에서 sessionId 가져오기
+  const urlSessionId = searchParams.get('sessionId');
+  
+  // 세션 및 리비전 ID 관리
+  const [sessionId, setSessionId] = useState<string>(urlSessionId || '');
+  const [revisionId, setRevisionId] = useState<string>('');
   
   // 초기 AI 메시지 (전체 텍스트)
   const initialAiMessage = '대본이 완성됐어요! ✨ 수정하고 싶은 부분이 있다면 편하게 말씀해주세요.';
   
   // 메시지 리스트 상태 (초기에는 빈 메시지로 시작, 타이핑 효과로 추가)
-  const [messages, setMessages] = useState<Array<{ role: 'ai' | 'user'; content: string }>>([
+  const [messages, setMessages] = useState<Array<{ 
+    role: 'ai' | 'user'; 
+    content: string;
+    revisionMode?: string;
+    suggestedChange?: string;
+    applyPromptType?: string;
+    isApplied?: boolean;
+    isRejected?: boolean;
+  }>>([
     { role: 'ai', content: '' }
   ]);
   
-  const [showModificationPrompt, setShowModificationPrompt] = useState(false);
+  // showModificationPrompt 제거: 대본 수정은 별도 API로 처리하므로 대화만 진행
   const [isChatOpen, setIsChatOpen] = useState(true); // 챗봇 열림/닫힘 상태 (기본값: 열림)
   const [isTyping, setIsTyping] = useState(true); // 타이핑 중인지 여부
-  const [expandedDesignReasons, setExpandedDesignReasons] = useState<Set<string>>(new Set()); // 설계 이유 말풍선 표시 상태
+  const [isLoading, setIsLoading] = useState(false); // API 호출 중인지 여부
+  const [expandedDesignReasons, setExpandedDesignReasons] = useState<Set<string>>(new Set()); // 설계 이유 말풍선 표시 상태 (클릭)
+  const [hoveredDesignReason, setHoveredDesignReason] = useState<string | null>(null); // 설계 이유 말풍선 표시 상태 (hover)
+  const [expandedMobileCards, setExpandedMobileCards] = useState<Set<string>>(new Set()); // 모바일 카드 확장 상태
 
   useEffect(() => {
-    // sessionStorage에서 생성된 데이터 가져오기
-    const storedData = sessionStorage.getItem('generatedScript');
-    const storedTopic = sessionStorage.getItem('reelTopic');
-    
-    if (storedData) {
+    const fetchLatestScript = async (sid: string) => {
       try {
-        const data = JSON.parse(storedData) as ReelScriptResponse;
+        const data = await getLatestReelScript(sid);
         setResultData(data);
+        
+        // revisionId 업데이트 (세션 스토리지는 유지 관리를 위해 업데이트할 수 있음)
+        if (data.revisionId) {
+          setRevisionId(data.revisionId);
+          sessionStorage.setItem('revisionId', data.revisionId);
+        }
       } catch (error) {
-        console.error('데이터 파싱 실패:', error);
+        console.error('대본 정보 조회 실패:', error);
         router.push('/contents/script-creation');
       }
-    } else {
-      // 데이터가 없으면 생성 페이지로 리다이렉트
-      router.push('/contents/script-creation');
-    }
-    
-    // 릴스 주제 정보 가져오기
+    };
+
+    // 릴스 주제 정보는 여전히 세션 스토리지에서 가져옴 (또는 필요시 파라미터화 가능)
+    const storedTopic = sessionStorage.getItem('reelTopic');
     if (storedTopic) {
       setReelTopic(storedTopic);
     }
-  }, [router]);
+
+    if (urlSessionId) {
+      setSessionId(urlSessionId);
+      sessionStorage.setItem('sessionId', urlSessionId); // 챗봇 등 다른 기능에서 참조할 수 있도록 저장
+      fetchLatestScript(urlSessionId);
+    } else {
+      // urlSessionId가 없으면 생성 페이지로 리다이렉트
+      router.push('/contents/script-creation');
+    }
+
+    const storedRevisionId = sessionStorage.getItem('revisionId');
+    if (storedRevisionId) {
+      setRevisionId(storedRevisionId);
+    }
+  }, [urlSessionId, router]);
 
   // 초기 AI 메시지 타이핑 효과
   useEffect(() => {
@@ -90,6 +125,20 @@ function ScriptResultContent() {
 
     return () => clearInterval(typingInterval);
   }, [isTyping]);
+
+  // visualSource 파싱 헬퍼 함수
+  const parseVisualSource = (visualSource: string) => {
+    const vsText = visualSource || '';
+    const parts = vsText.split(/자막\s*:\s*/);
+    const screenContent = parts[0]
+      .replace(/^원본\s*\(.*?\)\s*:\s*/, '')
+      .replace(/^원본\s*:\s*/, '')
+      .trim();
+    const subtitleContent = parts[1] 
+      ? parts[1].replace(/[\.\*]$/, '').trim() 
+      : '';
+    return { screenContent, subtitleContent };
+  };
 
   // 더미 데이터가 segments가 없으면 기본 segments 생성
   const segments: ScriptSegment[] = resultData?.segments || (resultData?.script ? parseScriptToSegments(resultData.script) : []);
@@ -180,41 +229,175 @@ function ScriptResultContent() {
     return segments;
   }
 
-  // 챗봇 메시지 전송 핸들러
-  const handleSendMessage = () => {
-    if (!chatMessage.trim()) return;
+  // 수정 사항 적용 핸들러
+  const handleApplySuggestion = async (index: number) => {
+    const msg = messages[index];
+    if (!msg.suggestedChange || isLoading) return;
+
+    setIsLoading(true);
+    try {
+      // 대본 수정 적용 API 호출
+      const response = await applyReelScript({
+        sessionId,
+        parentRevisionId: revisionId,
+        suggestedChange: msg.suggestedChange
+      });
+
+      // 왼쪽 대본 테이블 데이터 업데이트
+      setResultData(response);
+      
+      // revisionId 업데이트
+      if (response.revisionId) {
+        setRevisionId(response.revisionId);
+        sessionStorage.setItem('revisionId', response.revisionId);
+      }
+
+      // 메시지 상태 업데이트 (적용됨 표시)
+      setMessages(prev => prev.map((m, i) => 
+        i === index ? { ...m, isApplied: true } : m
+      ));
+
+      // AI 완료 메시지 추가
+      const completionMessage = {
+        role: 'ai' as const,
+        content: '수정 사항이 대본에 반영되었습니다! ✨'
+      };
+      setMessages(prev => [...prev, completionMessage]);
+
+    } catch (error: any) {
+      console.error('대본 수정 적용 실패:', error);
+      const errorMessage = {
+        role: 'ai' as const,
+        content: error?.message || '대본 수정 적용 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 수정 사항 거절 핸들러
+  const handleRejectSuggestion = (index: number) => {
+    setMessages(prev => prev.map((msg, i) => 
+      i === index ? { ...msg, isRejected: true } : msg
+    ));
+  };
+
+  // 챗봇 메시지 전송 핸들러: 사용자 메시지를 전송하고 AI 챗봇 대화 API 호출
+  const handleSendMessage = async () => {
+    if (!chatMessage.trim() || isLoading) return;
+    
+    // sessionId가 없으면 API 호출 불가
+    if (!sessionId) {
+      const errorMessage = { 
+        role: 'ai' as const, 
+        content: '챗봇 대화를 위한 세션 정보가 없습니다. 처음부터 다시 생성해주세요.' 
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      setChatMessage('');
+      return;
+    }
     
     // 사용자 메시지 추가
-    const newUserMessage = { role: 'user' as const, content: chatMessage };
+    const userMessage = chatMessage.trim();
+    const newUserMessage = { role: 'user' as const, content: userMessage };
     setMessages(prev => [...prev, newUserMessage]);
+    setChatMessage('');
+    setIsLoading(true);
     
-    // 더미 AI 피드백 생성
-    setTimeout(() => {
+    try {
+      // AI 챗봇 대화 API 호출 (완성된 대본에 대해 대화)
+      const response = await chatReelScript({
+        sessionId,
+        editRequest: userMessage, // 사용자 메시지를 editRequest로 전달
+      });
+      
+      // revisionMode가 suggestion일 경우 suggestedChange를 메시지 내용으로 사용
+      const aiMessage = (response.revisionMode === 'suggestion' && response.suggestedChange)
+        ? response.suggestedChange
+        : (response.script || '알겠습니다! 대본에 대해 더 궁금한 점이 있으시면 말씀해주세요.');
+      
+      // AI 응답 메시지 추가
       const aiResponse = { 
         role: 'ai' as const, 
-        content: `알겠습니다! 👌 요청하신 내용을 반영해서 대본을 수정해 드릴까요?` 
+        content: aiMessage,
+        revisionMode: response.revisionMode,
+        suggestedChange: response.suggestedChange,
+        applyPromptType: response.applyPromptType
       };
       setMessages(prev => [...prev, aiResponse]);
-      setShowModificationPrompt(true);
-    }, 600);
-    
-    setChatMessage('');
+      
+      // revisionId 업데이트 (새로운 revisionId가 있다면)
+      if (response.revisionId && response.revisionId !== revisionId) {
+        setRevisionId(response.revisionId);
+        sessionStorage.setItem('revisionId', response.revisionId);
+      }
+      
+    } catch (error: any) {
+      console.error('챗봇 대화 API 호출 실패:', error);
+      
+      // 에러 메시지 추가
+      const errorMessage = { 
+        role: 'ai' as const, 
+        content: error?.message || '챗봇 대화 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' 
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleApplyModification = () => {
-    // 수정 사항 적용 로직 (추후 구현)
-    setShowModificationPrompt(false);
+  // 대본 업데이트는 별도 API를 사용하므로 이 핸들러들은 사용하지 않음
+  // TODO: 실제 대본 업데이트 API가 구현되면 별도 함수로 분리하여 구현
+
+  // 엑셀 다운로드 핸들러: 대본 테이블을 엑셀 파일로 다운로드
+  const handleDownloadExcel = () => {
+    if (!resultData || segments.length === 0) {
+      return;
+    }
+
+    // 엑셀 데이터 준비
+    const excelData = segments.map((segment, index) => {
+      const { screenContent, subtitleContent } = parseVisualSource(segment.visualSource || '');
+
+      return {
+        '순번': index + 1,
+        '구간': segment.section,
+        '타임라인(초)': segment.timeline,
+        '대본': segment.script,
+        '화면': screenContent,
+        '자막': subtitleContent,
+        '설계 이유': segment.designReason,
+      };
+    });
+
+    // 워크북 생성
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(excelData);
+
+    // 컬럼 너비 설정
+    ws['!cols'] = [
+      { wch: 8 },  // 순번
+      { wch: 12 }, // 구간
+      { wch: 15 }, // 타임라인
+      { wch: 40 }, // 대본
+      { wch: 40 }, // 화면
+      { wch: 30 }, // 자막
+      { wch: 50 }, // 설계 이유
+    ];
+
+    // 워크시트 추가
+    XLSX.utils.book_append_sheet(wb, ws, '대본');
+
+    // 파일명 생성 (릴스 주제 포함)
+    const fileName = reelTopic 
+      ? `${reelTopic}_대본_${new Date().toISOString().split('T')[0]}.xlsx`
+      : `대본_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+    // 파일 다운로드
+    XLSX.writeFile(wb, fileName);
   };
 
-  const handleRegenerate = () => {
-    // 재생성 로직 (추후 구현)
-    setShowModificationPrompt(false);
-  };
-
-  const handleBack = () => {
-    sessionStorage.removeItem('generatedScript');
-    router.push('/contents/script-creation');
-  };
 
   if (!resultData) {
     return (
@@ -228,10 +411,10 @@ function ScriptResultContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-pink-50/30">
-      <div className="w-full px-4 sm:px-6 lg:px-8 pt-10 sm:pt-14 lg:pt-12 pb-24 sm:pb-8">
-        {/* 페이지 타이틀과 챗봇 토글 버튼 (PC: 같은 row, 모바일: 세로 배치) */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 lg:mb-8">
+    <div className="bg-gradient-to-b from-white to-pink-50/30">
+      <div className="w-full px-4 sm:px-6 lg:px-8 pt-10 sm:pt-14 lg:pt-12 pb-24 lg:pb-16">
+        {/* 페이지 타이틀과 챗봇 토글 버튼 (PC: 같은 row, 모바일: 같은 행 오른쪽 정렬) */}
+        <div className="flex flex-row items-center justify-between gap-4 mb-6 lg:mb-8">
           {/* 페이지 타이틀 */}
           {reelTopic && (
             <div className="flex-1">
@@ -241,8 +424,47 @@ function ScriptResultContent() {
             </div>
           )}
 
-          {/* 상단 챗봇 토글 버튼 (PC 전용) */}
-          <div className="hidden lg:flex">
+          {/* 엑셀 다운로드 버튼 (모바일: title과 같은 행 오른쪽, PC: 챗봇 버튼과 함께) */}
+          <div className="flex lg:hidden">
+            <motion.button
+              onClick={handleDownloadExcel}
+              className="group relative flex items-center justify-center w-10 h-10 rounded-xl border border-[#EDEDF1] bg-white text-[#373A46] hover:bg-gray-50 transition-all shadow-sm"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              title="엑셀로 다운로드"
+            >
+              <Image
+                src="/images/icon_excel.png"
+                alt="엑셀 다운로드"
+                width={24}
+                height={24}
+                className="w-6 h-6"
+                unoptimized
+              />
+            </motion.button>
+          </div>
+
+          {/* 상단 챗봇 토글 버튼 및 엑셀 다운로드 버튼 (PC 전용) */}
+          <div className="hidden lg:flex items-center gap-3">
+            {/* 엑셀 다운로드 버튼 */}
+            <motion.button
+              onClick={handleDownloadExcel}
+              className="group relative flex items-center justify-center w-10 h-10 rounded-xl border border-[#EDEDF1] bg-white text-[#373A46] hover:bg-gray-50 transition-all shadow-sm"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              title="엑셀로 다운로드"
+            >
+              <Image
+                src="/images/icon_excel.png"
+                alt="엑셀 다운로드"
+                width={24}
+                height={24}
+                className="w-6 h-6"
+                unoptimized
+              />
+            </motion.button>
+
+            {/* 챗봇 토글 버튼 */}
             <motion.button
               onClick={() => setIsChatOpen(!isChatOpen)}
               className={`group relative flex items-center gap-2.5 py-2.5 px-5 rounded-xl border transition-all shadow-sm ${
@@ -291,9 +513,10 @@ function ScriptResultContent() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* 왼쪽: 대본 테이블 영역 */}
           <div className={`${isChatOpen ? 'lg:col-span-2' : 'lg:col-span-3'} transition-all duration-500 ease-in-out`}>
-            {/* 모바일 가로 스크롤을 위한 컨테이너 */}
-            <div className="overflow-x-auto pb-4 lg:pb-0 lg:overflow-visible custom-scrollbar">
-              <div className="min-w-[700px] lg:min-w-0">
+            {/* PC: 테이블 형태, 모바일: 카드 형태 */}
+            {/* PC 테이블 (기존) */}
+            <div className="hidden lg:block">
+              <div className="overflow-visible custom-scrollbar">
                 {/* 독립된 헤더 박스들 */}
                 <div className="grid grid-cols-12 gap-3 mb-4">
                   <TableHeader title="타임라인(초)" className="col-span-2" />
@@ -301,25 +524,10 @@ function ScriptResultContent() {
                   <TableHeader title="화면 설계" className="col-span-7" />
                 </div>
 
-                {/* 테이블 바디 (스크롤 가능 영역) */}
-                <div className="space-y-3 max-h-[calc(100vh-280px)] overflow-y-auto pr-2 custom-scrollbar">
+                {/* 테이블 바디 (전체 표시) */}
+                <div className="space-y-3 pr-2 pt-4">
                   {segments.map((segment, index) => {
-                    // 화면 설계(visualSource) 파싱: "원본(...): 내용. 자막: 내용" 형식 처리
-                    const vsText = segment.visualSource || '';
-                    
-                    // "자막:" 또는 "자막 :" 기준으로 분리
-                    const parts = vsText.split(/자막\s*:\s*/);
-                    
-                    // 화면 내용: "원본(...):" 또는 "원본:" 접두어 제거
-                    const screenContent = parts[0]
-                      .replace(/^원본\s*\(.*?\)\s*:\s*/, '')
-                      .replace(/^원본\s*:\s*/, '')
-                      .trim();
-                    
-                    // 자막 내용: 마지막에 붙은 마침표나 별표 제거
-                    const subtitleContent = parts[1] 
-                      ? parts[1].replace(/[\.\*]$/, '').trim() 
-                      : '';
+                    const { screenContent, subtitleContent } = parseVisualSource(segment.visualSource || '');
 
                     return (
                       <motion.div
@@ -377,6 +585,8 @@ function ScriptResultContent() {
                           {/* 설계 이유 아이콘 (오른쪽 아래) */}
                           <div className="absolute right-4 bottom-4">
                             <button
+                              onMouseEnter={() => setHoveredDesignReason(segment.id)}
+                              onMouseLeave={() => setHoveredDesignReason(null)}
                               onClick={() => {
                                 setExpandedDesignReasons(prev => {
                                   const newSet = new Set(prev);
@@ -392,7 +602,7 @@ function ScriptResultContent() {
                               aria-label="설계 이유 보기"
                             >
                               <Image
-                                src={expandedDesignReasons.has(segment.id) ? "/images/right_on.svg" : "/images/right_off.svg"}
+                                src={(expandedDesignReasons.has(segment.id) || hoveredDesignReason === segment.id) ? "/images/right_on.svg" : "/images/right_off.svg"}
                                 alt="설계 이유"
                                 width={37}
                                 height={37}
@@ -400,25 +610,21 @@ function ScriptResultContent() {
                                 unoptimized
                               />
                               
-                              {/* 설계 이유 말풍선 (아이콘과 함께 움직임) */}
-                              {expandedDesignReasons.has(segment.id) && (
+                              {/* 설계 이유 말풍선 (hover 또는 클릭 시 표시) */}
+                              {(expandedDesignReasons.has(segment.id) || hoveredDesignReason === segment.id) && (
                                 <div
-                                  className="absolute right-0 top-0 -translate-y-full mb-2 bg-white border border-[#EDEDF1] rounded-xl shadow-lg z-[9999]"
+                                  className="absolute right-0 top-0 -translate-y-full mb-2 bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg z-[9999]"
                                   style={{
-                                    width: '258px',
-                                    height: '72px',
                                     marginTop: '-8px',
-                                    padding: '12px 16px',
-                                    display: 'flex',
-                                    alignItems: 'center',
+                                    width: '258px',
+                                    maxWidth: '258px',
                                   }}
                                 >
-                                  <div className="text-[12px] text-[#373A46] leading-relaxed overflow-hidden text-ellipsis line-clamp-3">
+                                  <div className="whitespace-normal leading-relaxed break-words">
                                     {segment.designReason}
                                   </div>
                                   {/* 말풍선 꼬리 (아래쪽, 아이콘을 가리킴) */}
-                                  <div className="absolute right-4 bottom-0 translate-y-full w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-[#EDEDF1]"></div>
-                                  <div className="absolute right-[17px] bottom-0 translate-y-full w-0 h-0 border-l-7 border-r-7 border-t-7 border-transparent border-t-white"></div>
+                                  <div className="absolute bottom-0 right-4 translate-y-full w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-transparent border-t-gray-900"></div>
                                 </div>
                               )}
                             </button>
@@ -430,9 +636,117 @@ function ScriptResultContent() {
                 </div>
               </div>
             </div>
+
+            {/* 모바일 카드 형태 (전체 표시) */}
+            <div className="lg:hidden space-y-4 pr-2 pt-4">
+              {segments.map((segment, index) => {
+                const { screenContent, subtitleContent } = parseVisualSource(segment.visualSource || '');
+
+                const isExpanded = expandedMobileCards.has(segment.id);
+
+                return (
+                  <motion.div
+                    key={segment.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="bg-white relative"
+                  >
+                    {/* 카드 헤더 (회색 바 형태, 화살표 포함, 상단만 라운드) */}
+                    <div className="relative" id={`header-${segment.id}`} style={{ position: 'relative' }}>
+                      <button
+                        onClick={() => {
+                          setExpandedMobileCards(prev => {
+                            const newSet = new Set(prev);
+                            if (newSet.has(segment.id)) {
+                              newSet.delete(segment.id);
+                            } else {
+                              newSet.add(segment.id);
+                            }
+                            return newSet;
+                          });
+                        }}
+                        className={`w-full bg-gray-100 px-4 py-3 flex items-center justify-between hover:bg-gray-200 transition-colors ${
+                          isExpanded && segment.designReason ? 'rounded-t-2xl' : 'rounded-2xl'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-base font-bold text-[#373A46]">
+                            {index + 1}. {segment.section}
+                          </span>
+                          <span className="text-sm text-[#86889C] font-medium">
+                            {segment.timeline}
+                          </span>
+                        </div>
+                        <ChevronDown
+                          className={`w-5 h-5 text-[#86889C] flex-shrink-0 transition-transform ${
+                            isExpanded ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </button>
+
+                      {/* 설계 이유 (헤더 바로 아래, 확장 시에만 표시) */}
+                      <AnimatePresence>
+                        {isExpanded && segment.designReason && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.3, ease: 'easeInOut' }}
+                            className="overflow-hidden bg-gray-100 border-t border-b border-gray-200 rounded-b-2xl"
+                            id={`design-reason-${segment.id}`}
+                          >
+                            <div className="px-4 py-4">
+                              <div className="text-sm font-bold text-[#FF496D] mb-2">
+                                왜 이렇게 구성되었나요?
+                              </div>
+                              <p className="text-sm text-[#373A46] leading-relaxed">
+                                {segment.designReason}
+                              </p>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+
+                    {/* 카드 바디 (항상 표시: 대본, 화면, 자막) - 왼쪽 점선 포함 */}
+                    <div className="px-4 pb-4 pt-4 space-y-3 border-l-2 border-dashed border-gray-300 ml-2">
+                      {/* 대본 */}
+                      <div className="text-sm text-[#373A46] leading-relaxed whitespace-pre-wrap pl-2">
+                        "{segment.script}"
+                      </div>
+
+                      {/* 화면 (한 줄로 표시) */}
+                      {screenContent && (
+                        <div className="flex items-center gap-2 pl-2">
+                          <span className="bg-[#FFF0F3] text-[#FF496D] text-[10px] font-bold px-2 py-1 rounded flex-shrink-0">
+                            화면
+                          </span>
+                          <p className="text-sm text-[#373A46] leading-relaxed">
+                            {screenContent}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* 자막 (한 줄로 표시) */}
+                      {subtitleContent && (
+                        <div className="flex items-center gap-2 pl-2">
+                          <span className="bg-[#F8F9FA] text-[#FF496D] text-[10px] font-bold px-2 py-1 rounded flex-shrink-0">
+                            자막
+                          </span>
+                          <p className="text-sm text-[#373A46] leading-relaxed">
+                            {subtitleContent}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
           </div>
 
-          {/* 오른쪽: 챗봇 피드백 영역 (PC 전용) */}
+          {/* 오른쪽: 챗봇 피드백 영역 (PC 전용, Sticky 적용) */}
           <AnimatePresence>
             {isChatOpen && (
               <motion.div
@@ -440,9 +754,9 @@ function ScriptResultContent() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
                 transition={{ duration: 0.3 }}
-                className="hidden lg:block lg:col-span-1"
+                className="hidden lg:block lg:col-span-1 sticky top-24 self-start"
               >
-                <div className="bg-white border border-[#EDEDF1] rounded-3xl shadow-xl h-[calc(100vh-280px)] flex flex-col overflow-hidden">
+                <div className="bg-white border border-[#EDEDF1] rounded-3xl shadow-xl h-[calc(100vh-160px)] flex flex-col overflow-hidden">
                   {/* 메시지 리스트 */}
                   <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-gray-50/30">
                     {messages.map((msg, idx) => (
@@ -474,35 +788,44 @@ function ScriptResultContent() {
                           <p className="text-sm leading-relaxed font-semibold tracking-tight">
                             {msg.content}
                           </p>
+
+                          {/* 수정 제안 UI */}
+                          {msg.role === 'ai' && msg.revisionMode === 'suggestion' && !msg.isApplied && !msg.isRejected && (
+                            <div className="mt-4 pt-4 border-t border-gray-100">
+                              <p className="text-[13px] font-bold text-[#FF496D] mb-3">
+                                수정 사항을 적용하시겠습니까?
+                              </p>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleApplySuggestion(idx)}
+                                  className="flex-1 py-2 bg-[#FF496D] text-white text-xs font-bold rounded-lg hover:bg-[#E63E62] transition-colors"
+                                >
+                                  예
+                                </button>
+                                <button
+                                  onClick={() => handleRejectSuggestion(idx)}
+                                  className="flex-1 py-2 bg-gray-100 text-[#86889C] text-xs font-bold rounded-lg hover:bg-gray-200 transition-colors"
+                                >
+                                  아니오
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 적용/거절 상태 표시 */}
+                          {msg.isApplied && (
+                            <div className="mt-3 pt-3 border-t border-gray-100 text-[11px] text-[#FF496D] font-bold">
+                              ✓ 수정 사항이 적용되었습니다.
+                            </div>
+                          )}
+                          {msg.isRejected && (
+                            <div className="mt-3 pt-3 border-t border-gray-100 text-[11px] text-gray-400 font-bold">
+                              ✕ 수정 사항을 거절했습니다.
+                            </div>
+                          )}
                         </div>
                       </motion.div>
                     ))}
-
-                    {showModificationPrompt && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        className="bg-white border-2 border-[#FF496D]/10 rounded-2xl p-5 space-y-4 shadow-xl"
-                      >
-                        <div className="text-[13px] text-[#373A46] font-bold text-center">
-                          내용을 반영해서 수정해 드릴까요?
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={handleApplyModification}
-                            className="flex-1 px-4 py-2.5 bg-[#FF496D] text-white text-xs font-bold rounded-xl hover:bg-[#E63E62] transition-all shadow-md active:scale-95"
-                          >
-                            네, 부탁해요
-                          </button>
-                          <button
-                            onClick={handleRegenerate}
-                            className="flex-1 px-4 py-2.5 bg-[#F2F2F7] text-[#86889C] text-xs font-bold rounded-xl hover:bg-[#E5E5EA] transition-all active:scale-95"
-                          >
-                            아니요
-                          </button>
-                        </div>
-                      </motion.div>
-                    )}
                   </div>
 
                   {/* 채팅 입력창 */}
@@ -512,15 +835,21 @@ function ScriptResultContent() {
                         type="text"
                         value={chatMessage}
                         onChange={(e) => setChatMessage(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                        placeholder="예: 조금 더 유머러스하게 바꿔줘"
-                        className="w-full pl-4 pr-12 py-3.5 bg-white border border-[#EDEDF1] rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#FF496D]/20 focus:border-[#FF496D] transition-all shadow-sm"
+                        onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSendMessage()}
+                        placeholder={isLoading ? "대화 중..." : "예: 이 대본에 대해 궁금한 점이 있어요"}
+                        disabled={isLoading}
+                        className="w-full pl-4 pr-12 py-3.5 bg-white border border-[#EDEDF1] rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#FF496D]/20 focus:border-[#FF496D] transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                       <button
                         onClick={handleSendMessage}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 bg-[#FF496D] text-white rounded-xl hover:bg-[#E63E62] transition-all flex items-center justify-center shadow-lg active:scale-90"
+                        disabled={isLoading || !chatMessage.trim()}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 bg-[#FF496D] text-white rounded-xl hover:bg-[#E63E62] transition-all flex items-center justify-center shadow-lg active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#FF496D]"
                       >
-                        <Send className="w-4 h-4" />
+                        {isLoading ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        ) : (
+                          <Send className="w-4 h-4" />
+                        )}
                       </button>
                     </div>
                   </div>
@@ -588,35 +917,44 @@ function ScriptResultContent() {
                       <p className="text-sm leading-relaxed font-semibold tracking-tight">
                         {msg.content}
                       </p>
+
+                      {/* 수정 제안 UI (모바일) */}
+                      {msg.role === 'ai' && msg.revisionMode === 'suggestion' && !msg.isApplied && !msg.isRejected && (
+                        <div className="mt-4 pt-4 border-t border-gray-100">
+                          <p className="text-[13px] font-bold text-[#FF496D] mb-3">
+                            수정 사항을 적용하시겠습니까?
+                          </p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleApplySuggestion(idx)}
+                              className="flex-1 py-2 bg-[#FF496D] text-white text-xs font-bold rounded-lg hover:bg-[#E63E62] transition-colors"
+                            >
+                              예
+                            </button>
+                            <button
+                              onClick={() => handleRejectSuggestion(idx)}
+                              className="flex-1 py-2 bg-gray-100 text-[#86889C] text-xs font-bold rounded-lg hover:bg-gray-200 transition-colors"
+                            >
+                              아니오
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 적용/거절 상태 표시 (모바일) */}
+                      {msg.isApplied && (
+                        <div className="mt-3 pt-3 border-t border-gray-100 text-[11px] text-[#FF496D] font-bold">
+                          ✓ 수정 사항이 적용되었습니다.
+                        </div>
+                      )}
+                      {msg.isRejected && (
+                        <div className="mt-3 pt-3 border-t border-gray-100 text-[11px] text-gray-400 font-bold">
+                          ✕ 수정 사항을 거절했습니다.
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 ))}
-                
-                {showModificationPrompt && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    className="bg-white border-2 border-[#FF496D]/10 rounded-2xl p-5 space-y-4 shadow-xl"
-                  >
-                    <div className="text-[13px] text-[#373A46] font-bold text-center">
-                      내용을 반영해서 수정해 드릴까요?
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={handleApplyModification}
-                        className="flex-1 px-4 py-2.5 bg-[#FF496D] text-white text-xs font-bold rounded-xl hover:bg-[#E63E62] transition-all active:scale-95"
-                      >
-                        네, 부탁해요
-                      </button>
-                      <button
-                        onClick={handleRegenerate}
-                        className="flex-1 px-4 py-2.5 bg-[#F2F2F7] text-[#86889C] text-xs font-bold rounded-xl active:scale-95 transition-all"
-                      >
-                        아니요
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
               </div>
 
               {/* 입력창 (모바일 확장 시 하단 고정) */}
@@ -626,15 +964,21 @@ function ScriptResultContent() {
                     type="text"
                     value={chatMessage}
                     onChange={(e) => setChatMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                    placeholder="예: 조금 더 유머러스하게 바꿔줘"
-                    className="w-full pl-4 pr-12 py-3.5 bg-white border border-[#EDEDF1] rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#FF496D]/20 focus:border-[#FF496D] transition-all shadow-sm"
+                    onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSendMessage()}
+                    placeholder={isLoading ? "대화 중..." : "예: 이 대본에 대해 궁금한 점이 있어요"}
+                    disabled={isLoading}
+                    className="w-full pl-4 pr-12 py-3.5 bg-white border border-[#EDEDF1] rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#FF496D]/20 focus:border-[#FF496D] transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <button
                     onClick={handleSendMessage}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 bg-[#FF496D] text-white rounded-xl flex items-center justify-center shadow-lg active:scale-90 transition-all"
+                    disabled={isLoading || !chatMessage.trim()}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 bg-[#FF496D] text-white rounded-xl flex items-center justify-center shadow-lg active:scale-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#FF496D]"
                   >
-                    <Send className="w-4 h-4" />
+                    {isLoading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
                   </button>
                 </div>
               </div>

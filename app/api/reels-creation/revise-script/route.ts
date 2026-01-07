@@ -1,20 +1,33 @@
-// AI 대본 생성 프록시 API: 클라이언트의 요청을 외부 AI 서버로 전달
+// AI 챗봇 대화 프록시 API: 완성된 대본에 대해 챗봇으로 대화하기 위한 프록시
+// 실제 대본 업데이트는 별도 API를 사용해야 함
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerAiApiClient } from '@/app/lib/api/server-client';
 import { AxiosError } from 'axios';
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. 클라이언트로부터 전송된 FormData 파싱
-    const formData = await request.formData();
+    // 1. 클라이언트로부터 전송된 JSON body 파싱
+    const body = await request.json();
     
+    // 2. 필수 필드 검증
+    const { sessionId, editRequest } = body;
     
-    // 2. 외부 AI API 서버로 요청 전달 (Axios 사용)
+    if (!sessionId || !editRequest) {
+      return NextResponse.json(
+        { message: 'sessionId와 editRequest는 필수입니다.' },
+        { status: 400 }
+      );
+    }
+    
+    // 3. 외부 AI API 서버로 챗봇 대화 요청 전달 (Axios 사용)
     // getServerAiApiClient()를 사용하여 쿠키의 accessToken을 헤더에 포함
     const aiApiClient = await getServerAiApiClient();
-    const response = await aiApiClient.post('/ai/generate-reel-script', formData);
+    const response = await aiApiClient.post('/ai/revise-reel-script', {
+      sessionId,
+      editRequest,
+    });
 
-    // 3. 외부 서버의 응답을 클라이언트에 그대로 전달
+    // 4. 외부 서버의 응답을 클라이언트에 그대로 전달
     return NextResponse.json(response.data, { status: 200 });
 
   } catch (error) {
@@ -51,7 +64,7 @@ export async function POST(request: NextRequest) {
     // 500 에러의 경우 사용자 친화적인 메시지 제공
     const errorMessage = statusCode === 500 
       ? { message: '서버에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.' }
-      : errorData || { message: '대본 생성 중 서버 오류가 발생했습니다.' };
+      : errorData || { message: '챗봇 대화 중 서버 오류가 발생했습니다.' };
 
     return NextResponse.json(
       errorMessage,
