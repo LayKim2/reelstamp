@@ -3,9 +3,13 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { GoogleAnalytics } from "@next/third-parties/google";
+import Script from "next/script";
 import "./globals.css";
 import Header from "@/app/components/ui/Header";
 import Footer from "@/app/components/ui/Footer";
+import QueryProvider from "@/app/providers/QueryProvider";
+import { AuthProvider } from "@/app/components/providers/AuthProvider";
+import { getCurrentUser } from "@/app/lib/api/auth";
 
 // Geist Sans 폰트 설정: 기본 sans-serif 폰트
 const geistSans = Geist({
@@ -29,36 +33,50 @@ export const metadata: Metadata = {
 };
 
 // 루트 레이아웃: 헤더 + 메인 콘텐츠 구조
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+  
+  // 서버에서 유저 정보 미리 가져오기 (하이드레이션 패턴)
+  const initialUser = await getCurrentUser();
 
   return (
-    <html lang="ko" className="bg-white">
+    <html lang="ko" className="bg-gradient-to-br from-pink-50/20 via-white to-orange-50/20">
+      <head>
+        {/* Instagram 도메인 사전 연결 - 로딩 속도 최적화 */}
+        <link rel="preconnect" href="https://www.instagram.com" />
+        <link rel="dns-prefetch" href="https://www.instagram.com" />
+        <link rel="preconnect" href="https://static.cdninstagram.com" />
+        <link rel="dns-prefetch" href="https://static.cdninstagram.com" />
+      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col bg-white`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col bg-gradient-to-br from-pink-50/20 via-white to-orange-50/20`}
       >
-        {/* 공통 헤더 */}
-        <Header />
-        
-        {/* 메인 콘텐츠 영역 */}
-        <main className="flex-1">
-          {children}
-        </main>
+        <QueryProvider>
+          <AuthProvider initialUser={initialUser}>
+            {/* 공통 헤더 */}
+            <Header />
+            
+            {/* 메인 콘텐츠 영역 */}
+            <main className="flex-1">
+              {children}
+            </main>
 
-        {/* 공통 푸터 */}
-        <Footer />
+            {/* 공통 푸터 */}
+            <Footer />
+          </AuthProvider>
+        </QueryProvider>
 
         {/* Google Analytics 4 */}
         {gaMeasurementId && (
           <GoogleAnalytics gaId={gaMeasurementId} />
         )}
 
-        {/* Instagram Embed Script */}
-        <script async src="//www.instagram.com/embed.js"></script>
+        {/* Instagram Embed Script - beforeInteractive로 빠른 로딩 */}
+        
       </body>
     </html>
   );
