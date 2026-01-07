@@ -11,7 +11,7 @@ import PlanCard from '@/app/components/ui/PlanCard';
 
 export default function Home() {
   return (
-    <div className="min-h-full overflow-x-hidden">
+    <div>
       {/* 히어로 섹션: 메인 배너 영역 */}
       <section className="relative bg-white overflow-visible py-20 sm:py-20 md:py-28 lg:py-40 xl:py-48 sm:min-h-[calc(100vh-80px)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

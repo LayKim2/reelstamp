@@ -16,11 +16,37 @@ export interface PayAppPaymentRequest {
   var2?: string;       // 사용자 정의 변수 2 (예: plan_id)
 }
 
+/**
+ * PayApp 정기결제(Recurring) 등록 요청 파라미터
+ * cmd = rebillRegist
+ */
+export interface PayAppRecurringRequest {
+  userid: string;           // 판매자 아이디
+  goodname: string;         // 상품명
+  goodprice: number;        // 정기결제 금액
+  recvphone: string;        // 고객 휴대폰 번호
+  rebillCycleType: 'Month' | 'Week' | 'Day'; // 결제 주기 타입
+  rebillCycleMonth?: string; // 월 주기인 경우: 매월 결제일 (1~31)
+  rebillCycleWeek?: string;  // 주 주기인 경우: 요일
+  rebillExpire?: string;     // 정기결제 만료일 (yyyy-mm-dd)
+  feedbackurl: string;       // 웹훅(결과 통보) URL
+  returnurl: string;         // 성공 후 리다이렉트 URL
+  var1?: string;             // 임의값 1 (주로 userId)
+  var2?: string;             // 임의값 2 (planId 등)
+  var3?: string;             // 임의값 3 (orderId 등)
+}
+
 export interface PayAppPaymentResponse {
   state: string;       // 요청 결과 (1:성공, 0:실패)
   errorMessage?: string;
-  mul_no?: string;      // 결제 고유번호
+  mul_no?: string;      // 결제 고유번호 (orderId)
   payurl?: string;      // 결제 페이지 URL
+  /**
+   * TODO: 정기 결제 도입 시 PayApp에서 내려주는 billing key 필드 매핑
+   * - PayApp 정기결제 API를 사용할 때 응답에 빌링키가 포함된다면
+   *   그 필드를 파싱해서 여기에 넣고, DB의 subscription/order와 함께 저장한다.
+   */
+  billingKey?: string;
 }
 
 /**
@@ -62,7 +88,7 @@ export async function createPayAppPaymentLink(params: PayAppPaymentRequest): Pro
     return {
       state: result.get('state') || '0',
       errorMessage: result.get('errorMessage') || '',
-      mul_no: result.get('mul_no') || '',
+      mul_no: result.get('mul_no') || '', // order id
       payurl: result.get('payurl') || '',
     };
   } catch (error) {
@@ -70,6 +96,78 @@ export async function createPayAppPaymentLink(params: PayAppPaymentRequest): Pro
     return {
       state: '0',
       errorMessage: 'PayApp 서버와의 통신 중 오류가 발생했습니다.',
+    };
+  }
+}
+
+/**
+ * PayApp 정기결제(Recurring) 등록 요청
+ *
+ * cmd = rebillRegist
+ * - 최초 1회 결제 승인 + 정기결제 등록번호(rebill_no) 발급
+ * - 응답으로 payurl(결제창 URL)과 rebill_no(정기결제 등록번호)를 반환
+ */
+export async function createPayAppRecurringLink(
+  params: PayAppRecurringRequest,
+): Promise<PayAppPaymentResponse> {
+  try {
+    const formData = new URLSearchParams();
+    formData.append('cmd', 'rebillRegist');
+    formData.append('userid', params.userid);
+    formData.append('goodname', params.goodname);
+    formData.append('goodprice', String(params.goodprice));
+    formData.append('recvphone', params.recvphone);
+    formData.append('rebillCycleType', params.rebillCycleType);
+
+    if (params.rebillCycleMonth) {
+      formData.append('rebillCycleMonth', params.rebillCycleMonth);
+    }
+    if (params.rebillCycleWeek) {
+      formData.append('rebillCycleWeek', params.rebillCycleWeek);
+    }
+    if (params.rebillExpire) {
+      formData.append('rebillExpire', params.rebillExpire);
+    }
+
+    formData.append('feedbackurl', params.feedbackurl);
+    formData.append('returnurl', params.returnurl);
+    formData.append('var1', params.var1 || '');
+    formData.append('var2', params.var2 || '');
+    formData.append('var3', params.var3 || '');
+
+    const apiUrl = 'https://api.payapp.kr/oapi/apiLoad.html';
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': '*/*',
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+    });
+
+    const text = await response.text();
+
+    // 응답 형식 예시: state=1&errorMessage=&rebill_no=...&payurl=...
+    const result = new URLSearchParams(text);
+
+    return {
+      state: result.get('state') || '0',
+      errorMessage: result.get('errorMessage') || '',
+      // rebillRegist에서는 보통 mul_no 대신 rebill_no 를 돌려준다.
+      // 이후 정기과금 시에는 rebill_no + 주기 정보를 사용해 실제 결제가 발생하고,
+      // 그때의 mul_no 가 각 결제건(orderId)이 된다.
+      mul_no: result.get('mul_no') || '',
+      payurl: result.get('payurl') || '',
+      billingKey: result.get('rebill_no') || '',
+    };
+  } catch (error) {
+    console.error('[PayApp Recurring Utility Error]', error);
+    return {
+      state: '0',
+      errorMessage: 'PayApp 정기결제 등록 중 오류가 발생했습니다.',
     };
   }
 }
