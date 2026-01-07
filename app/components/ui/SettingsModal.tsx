@@ -15,56 +15,58 @@ interface SettingsModalProps {
   onClose: () => void;
 }
 
-interface SubscriptionData {
-  status: string;
-  active: boolean;
-  currentPeriodStart: string;
-  nextBillingDate: string;
-  validUntil: string;
-  canceledAt?: string;
-}
-
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, subscription, isLoadingSubscription, refreshSubscription } = useAuth();
   const [mounted, setMounted] = useState(false);
-  const [isFreePlan, setIsFreePlan] = useState(true);
-  const [subscriptionData, setSubscriptionData] = useState<SubscriptionData | null>(null);
-  const [isLoadingSubscription, setIsLoadingSubscription] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showSubscriptionWarning, setShowSubscriptionWarning] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // 추가된 상태
+  const [isManageOpen, setIsManageOpen] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // 구독 상태 조회
+  // 현재 구독 상태 정보 추출
+  const subInfo = subscription?.subscription;
+  const planInfo = subscription?.subscriptionPlan;
+  
+  // 플랜 이름 포맷팅 (예: PRO Plan, BASIC Plan)
+  const rawPlanName = planInfo?.plan || (subInfo?.active ? 'plus' : 'free');
+  const planName = `${rawPlanName.toUpperCase()} Plan`;
+  
+  const isFreePlan = !subInfo?.active;
+  const isCanceled = subInfo?.status === 'CANCELED' || subInfo?.status === 'CANCELLED';
+
   useEffect(() => {
-    if (isOpen && user) {
-      setIsLoadingSubscription(true);
-      getSubscriptionStatusAction()
-        .then((result) => {
-          if (result.success && result.data) {
-            setSubscriptionData(result.data);
-            setIsFreePlan(!result.data.active);
-          } else {
-            // API 호출 실패 시 기본값 유지
-            setIsFreePlan(true);
-          }
-        })
-        .catch(() => {
-          setIsFreePlan(true);
-        })
-        .finally(() => {
-          setIsLoadingSubscription(false);
-        });
+    if (isOpen) {
+      setShowDeleteConfirm(false);
+      setShowSubscriptionWarning(false);
+      setIsDeleting(false);
+      setIsManageOpen(false);
+      setShowCancelConfirm(false);
+      setIsCancelling(false);
     }
-  }, [isOpen, user]);
+  }, [isOpen]);
 
   // ESC 키로 닫기
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
+        // 하위 모달이 열려있으면 그것부터 닫기
+        if (showCancelConfirm) {
+          setShowCancelConfirm(false);
+          return;
+        }
+        if (isManageOpen) {
+          setIsManageOpen(false);
+          return;
+        }
         onClose();
       }
     };
@@ -78,11 +80,51 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, showCancelConfirm, isManageOpen]);
 
   if (!mounted) return null;
 
+  // 구독 해지 처리 함수
+  const handleCancelSubscription = async () => {
+    if (!subInfo) return;
+
+    setIsCancelling(true);
+    try {
+      const response = await fetch('/api/payments/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          billingKey: subInfo.billingKey, 
+          orderId: subInfo.orderId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert('구독 해지 예약이 완료되었습니다.');
+        setShowCancelConfirm(false);
+        setIsManageOpen(false);
+        // 전역 구독 정보 갱신
+        await refreshSubscription();
+      } else {
+        alert(data.message || '해지 요청 중 오류가 발생했습니다.');
+      }
+    } catch (error) {
+      console.error('Cancel Error:', error);
+      alert('서버와 통신 중 오류가 발생했습니다.');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   const handleDeleteAccount = async () => {
+    // 구독 중인 경우 삭제 방지 (구독 해지 예약이 되어있지 않은 경우)
+    if (!isFreePlan && !isCanceled) {
+      setShowDeleteConfirm(false);
+      return;
+    }
+
     setIsDeleting(true);
     try {
       const result = await deleteAccountAction();
@@ -184,13 +226,64 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     <div className="mb-6 sm:mb-8">
                       <div className="flex items-center justify-between gap-3 mb-4">
                         <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
-                          {isFreePlan ? 'Free Plan' : 'Reelstamp Plus'}
+                          {planName}
                         </h2>
                         <div className="relative">
-                          <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
+                          <button 
+                            onClick={() => {
+                              if (isFreePlan) {
+                                router.push('/pricing');
+                              } else {
+                                setIsManageOpen(!isManageOpen);
+                              }
+                            }}
+                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
+                          >
                             Manage
-                            <span className="text-xs">▼</span>
+                            <span className={`text-[10px] transition-transform ${isManageOpen ? 'rotate-180' : ''}`}>▼</span>
                           </button>
+
+                          {/* Manage Dropdown */}
+                          <AnimatePresence>
+                            {isManageOpen && !isFreePlan && (
+                              <>
+                                <div 
+                                  className="fixed inset-0 z-40" 
+                                  onClick={() => setIsManageOpen(false)} 
+                                />
+                                <motion.div
+                                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                                  transition={{ duration: 0.15 }}
+                                  className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-50 overflow-hidden"
+                                >
+                                  <button
+                                    onClick={() => {
+                                      setIsManageOpen(false);
+                                      router.push('/pricing');
+                                    }}
+                                    className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
+                                  >
+                                    <RefreshCw className="w-4 h-4 text-gray-400" />
+                                    Plan 변경
+                                  </button>
+                                  {!isCanceled && (
+                                    <button
+                                      onClick={() => {
+                                        setIsManageOpen(false);
+                                        setShowCancelConfirm(true);
+                                      }}
+                                      className="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                      구독 취소
+                                    </button>
+                                  )}
+                                </motion.div>
+                              </>
+                            )}
+                          </AnimatePresence>
                         </div>
                       </div>
 
@@ -217,18 +310,26 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                         <>
                           {isLoadingSubscription ? (
                             <p className="text-gray-600 mb-6">구독 정보를 불러오는 중...</p>
-                          ) : subscriptionData ? (
-                            <p className="text-gray-600 mb-2">
-                              {subscriptionData.validUntil
-                                ? `${formatDate(subscriptionData.validUntil)}까지 유효합니다.`
-                                : 'Reelstamp Plus를 사용 중입니다.'}
-                            </p>
+                          ) : subInfo ? (
+                            <div className="mb-6">
+                              {isCanceled ? (
+                                <p className="text-[#8B2635] font-medium mb-1">
+                                  구독 해지 예약됨
+                                </p>
+                              ) : null}
+                              <p className="text-gray-600">
+                                {isCanceled 
+                                  ? `${formatDate(subInfo.validUntil)}까지 서비스를 이용하실 수 있습니다.`
+                                  : `다음 결제일은 ${formatDate(subInfo.nextBillingDate)}입니다.`
+                                }
+                              </p>
+                            </div>
                           ) : (
-                            <p className="text-gray-600 mb-2">Reelstamp Plus를 사용 중입니다.</p>
+                            <p className="text-gray-600 mb-6">{planName}을(를) 사용 중입니다.</p>
                           )}
                           <div className="bg-gradient-to-r from-[#EB48B1]/10 to-[#F59A39]/10 rounded-xl p-4 sm:p-6 mb-4 sm:mb-6">
                             <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
-                              Thanks for subscribing to Reelstamp Plus!
+                              {isCanceled ? '남은 기간 동안 혜택을 마음껏 누리세요!' : `Reelstamp ${planInfo?.name} 혜택을 즐겨보세요!`}
                             </h3>
                             <ul className="space-y-2 sm:space-y-3">
                               {planBenefits.map((benefit, index) => (
@@ -250,10 +351,21 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                           <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-1">
                             Delete account
                           </h2>
+                          {showSubscriptionWarning && !isFreePlan && !isCanceled && (
+                            <p className="text-sm text-[#8B2635] font-medium mb-3">
+                              * 현재 활성화된 구독이 있습니다. [Manage] 메뉴에서 먼저 구독을 해지한 후에 계정 삭제가 가능합니다.
+                            </p>
+                          )}
                         </div>
                         {!showDeleteConfirm ? (
                           <button
-                            onClick={() => setShowDeleteConfirm(true)}
+                            onClick={() => {
+                              if (!isFreePlan && !isCanceled) {
+                                setShowSubscriptionWarning(true);
+                                return;
+                              }
+                              setShowDeleteConfirm(true);
+                            }}
                             className="px-3 sm:px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors flex items-center justify-center gap-1.5 sm:gap-2 flex-shrink-0"
                             style={{ backgroundColor: '#8B2635' }}
                             onMouseEnter={(e) => {
@@ -305,6 +417,56 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               </div>
             </motion.div>
           </div>
+          {/* 계정 삭제 확인 모달과 구독 취소 확인 모달을 위한 추가 레이어 */}
+          <AnimatePresence>
+            {showCancelConfirm && (
+              <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4">
+                {/* 내부 오버레이 */}
+                <motion.div
+                  className="fixed inset-0 bg-black/40 backdrop-blur-[2px]"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => !isCancelling && setShowCancelConfirm(false)}
+                />
+                
+                {/* 모달 콘텐츠 */}
+                <motion.div
+                  className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 relative z-10"
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                >
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">구독을 취소하시겠습니까?</h3>
+                  <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+                    구독을 해지하셔도 <span className="font-bold text-gray-900">{subInfo?.validUntil ? formatDate(subInfo.validUntil) : '만료일'}</span>까지는 혜택을 계속 누리실 수 있습니다. 이후에는 자동으로 해지됩니다.
+                  </p>
+                  
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowCancelConfirm(false)}
+                      disabled={isCancelling}
+                      className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50"
+                    >
+                      유지하기
+                    </button>
+                    <button
+                      onClick={handleCancelSubscription}
+                      disabled={isCancelling}
+                      className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {isCancelling ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          처리 중
+                        </>
+                      ) : '해지 확인'}
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
         </>
       )}
     </AnimatePresence>,

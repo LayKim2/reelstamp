@@ -35,6 +35,47 @@ export interface LoginResponseData {
   userInfo: UserInfo;
 }
 
+export interface SubscriptionData {
+  status: string;
+  active: boolean;
+  currentPeriodStart: string;
+  nextBillingDate: string;
+  validUntil: string;
+  canceledAt?: string;
+  billingKey?: string; // 추가
+  orderId?: string;    // 추가
+}
+
+export interface SubscriptionStatusResponse {
+  subscription: SubscriptionData;
+  subscriptionPlan: {
+    plan: string;
+    name: string;
+    description: string;
+    textEnabled: boolean;
+    videoEnabled: boolean;
+    sessionLimit: number;
+    revisionLimit: number;
+    price: {
+      fakePrice: number;
+      regularPrice: number;
+      openPrice: number;
+    };
+  };
+  sessionUsage: {
+    limit: number;
+    used: number;
+    remaining: number;
+    unlimited: boolean;
+  };
+  revisionUsage: {
+    limit: number;
+    used: number;
+    remaining: number;
+    unlimited: boolean;
+  };
+}
+
 export interface RefreshTokenResponse {
   tokenInfo: TokenInfo;
 }

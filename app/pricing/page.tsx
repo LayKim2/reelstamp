@@ -8,49 +8,15 @@ import { getSubscriptionStatusAction } from '@/app/actions/auth';
 import { freePlanFeatures, basicPlanFeatures, proPlanFeatures, masterPlanFeatures, freePlanEventBenefit, basicPlanEventBenefit } from '@/app/lib/constants/plans';
 import PlanCard from '@/app/components/ui/PlanCard';
 
-interface SubscriptionData {
-  status: string;
-  active: boolean;
-  currentPeriodStart: string;
-  nextBillingDate: string;
-  validUntil: string;
-  canceledAt?: string;
-}
-
 export default function PricingPage() {
   const router = useRouter();
-  const { isAuthenticated, user } = useAuth();
-  const [subscriptionData, setSubscriptionData] = useState<SubscriptionData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isFreePlan, setIsFreePlan] = useState(true);
+  const { isAuthenticated, user, subscription, isLoadingSubscription } = useAuth();
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
 
-  useEffect(() => {
-    // 로그인되어 있을 때만 구독 상태 조회
-    if (!isAuthenticated) {
-      setIsLoading(false);
-      setIsFreePlan(true); // 로그인 안 되어 있으면 기본값
-      return;
-    }
-
-    // 구독 상태 조회
-    setIsLoading(true);
-    getSubscriptionStatusAction()
-      .then((result) => {
-        if (result.success && result.data) {
-          setSubscriptionData(result.data);
-          setIsFreePlan(!result.data.active);
-        } else {
-          setIsFreePlan(true);
-        }
-      })
-      .catch(() => {
-        setIsFreePlan(true);
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  }, [isAuthenticated]);
+  // 현재 구독 중인 플랜 코드 확인
+  const currentPlanCode = subscription?.subscriptionPlan?.plan || 'free';
+  const isActive = subscription?.subscription?.active || false;
+  const isFreePlan = !isActive;
 
   // 결제 요청 처리 함수
   const handlePayment = async (planId: string, planName: string, price: number) => {
@@ -104,7 +70,7 @@ export default function PricingPage() {
             features={freePlanFeatures}
             eventBenefit={freePlanEventBenefit}
             buttonType="button"
-            buttonText={isAuthenticated && !isLoading && isFreePlan ? '현재 플랜' : '무료 플랜 시작하기'}
+            buttonText={isAuthenticated && !isLoadingSubscription && isFreePlan ? '현재 플랜' : '무료 플랜 시작하기'}
             buttonOnClick={() => {
               if (!isAuthenticated) {
                 router.push('/login');
@@ -112,14 +78,14 @@ export default function PricingPage() {
               }
               // Free 플랜 시작 로직 (추후 구현)
             }}
-            isCurrentPlan={isAuthenticated && !isLoading && isFreePlan}
+            isCurrentPlan={isAuthenticated && !isLoadingSubscription && isFreePlan}
             buttonClassName="bg-gray-700 text-white hover:bg-gray-800"
           />
 
           {/* Basic 플랜 카드 */}
           <PlanCard
             planName="Basic"
-            price="₩4,900"
+            price="₩1,000"
             discountInfo={{
               percentage: '75%',
               originalPrice: '19,900원',
@@ -127,9 +93,9 @@ export default function PricingPage() {
             features={basicPlanFeatures}
             eventBenefit={basicPlanEventBenefit}
             buttonType="button"
-            buttonText={isAuthenticated && !isLoading && !isFreePlan && subscriptionData?.active ? '현재 플랜' : '구독하기'}
-            buttonOnClick={() => handlePayment('basic', 'Basic', 4900)}
-            isCurrentPlan={isAuthenticated && !isLoading && !isFreePlan && subscriptionData?.active}
+            buttonText={isAuthenticated && !isLoadingSubscription && currentPlanCode === 'basic' && isActive ? '현재 플랜' : '구독하기'}
+            buttonOnClick={() => handlePayment('basic', 'Basic', 1000)}
+            isCurrentPlan={isAuthenticated && !isLoadingSubscription && currentPlanCode === 'basic' && isActive}
             buttonClassName="bg-[#FF496D] text-white hover:bg-[#E63E62]"
             buttonDisabled={isPaymentProcessing}
           />
@@ -145,9 +111,9 @@ export default function PricingPage() {
             features={proPlanFeatures}
             isPopular={true}
             buttonType="button"
-            buttonText={isAuthenticated && !isLoading && subscriptionData?.active ? '현재 플랜' : '구독하기'}
+            buttonText={isAuthenticated && !isLoadingSubscription && currentPlanCode === 'pro' && isActive ? '현재 플랜' : '구독하기'}
             buttonOnClick={() => handlePayment('pro', 'Pro', 9900)}
-            isCurrentPlan={isAuthenticated && !isLoading && subscriptionData?.active}
+            isCurrentPlan={isAuthenticated && !isLoadingSubscription && currentPlanCode === 'pro' && isActive}
             buttonClassName="bg-[#FF496D] text-white hover:bg-[#E63E62]"
             buttonDisabled={isPaymentProcessing}
           />
@@ -162,9 +128,9 @@ export default function PricingPage() {
             }}
             features={masterPlanFeatures}
             buttonType="button"
-            buttonText={isAuthenticated && !isLoading && subscriptionData?.active ? '현재 플랜' : '구독하기'}
+            buttonText={isAuthenticated && !isLoadingSubscription && currentPlanCode === 'master' && isActive ? '현재 플랜' : '구독하기'}
             buttonOnClick={() => handlePayment('master', 'Master', 49900)}
-            isCurrentPlan={isAuthenticated && !isLoading && subscriptionData?.active}
+            isCurrentPlan={isAuthenticated && !isLoadingSubscription && currentPlanCode === 'master' && isActive}
             buttonClassName="bg-[#FF496D] text-white hover:bg-[#E63E62]"
             buttonDisabled={isPaymentProcessing}
           />

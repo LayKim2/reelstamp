@@ -156,9 +156,6 @@ export async function createPayAppRecurringLink(
     return {
       state: result.get('state') || '0',
       errorMessage: result.get('errorMessage') || '',
-      // rebillRegist에서는 보통 mul_no 대신 rebill_no 를 돌려준다.
-      // 이후 정기과금 시에는 rebill_no + 주기 정보를 사용해 실제 결제가 발생하고,
-      // 그때의 mul_no 가 각 결제건(orderId)이 된다.
       mul_no: result.get('mul_no') || '',
       payurl: result.get('payurl') || '',
       billingKey: result.get('rebill_no') || '',
@@ -169,5 +166,46 @@ export async function createPayAppRecurringLink(
       state: '0',
       errorMessage: 'PayApp 정기결제 등록 중 오류가 발생했습니다.',
     };
+  }
+}
+
+/**
+ * PayApp 정기결제 해지 요청 (다음 결제부터 중단)
+ * cmd = rebillCancel
+ */
+export async function cancelPayAppRecurring(params: {
+  userid: string;
+  linkkey: string;
+  rebill_no: string;
+}): Promise<{ state: string; errorMessage?: string }> {
+  try {
+    const formData = new URLSearchParams();
+    formData.append('cmd', 'rebillCancel');
+    formData.append('userid', params.userid);
+    formData.append('linkkey', params.linkkey);
+    formData.append('rebill_no', params.rebill_no);
+
+    const apiUrl = 'https://api.payapp.kr/oapi/apiLoad.html';
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': '*/*',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+    });
+
+    const text = await response.text();
+    const result = new URLSearchParams(text);
+
+    return {
+      state: result.get('state') || '0',
+      errorMessage: result.get('errorMessage') || '',
+    };
+  } catch (error) {
+    console.error('[PayApp Recurring Cancel Error]', error);
+    return { state: '0', errorMessage: '해지 요청 중 오류가 발생했습니다.' };
   }
 }

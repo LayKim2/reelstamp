@@ -80,8 +80,7 @@ export async function POST(request: NextRequest) {
       returnurl: `${baseUrl}/pricing/success`, // 결제 완료 후 브라우저가 돌아갈 페이지
       feedbackurl: `${baseUrl}/api/payment`, // 결제 완료 통보용 웹훅
       var1: String(user.id), // 임의값 1: 사용자 ID (userId)
-      var2: planId, // 임의값 2: 플랜 코드 (planId)
-      var3: internalOrderId, // 임의값 3: 우리 시스템 주문번호 (orderId)
+      var2: internalOrderId, // 임의값 2: 우리 시스템 주문번호 (internalOrderId)
     });
 
     console.log('[PayApp Recurring Link Response]', {

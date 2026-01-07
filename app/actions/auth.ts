@@ -3,7 +3,7 @@
 
 import { cookies } from 'next/headers';
 import { webApiClient } from '@/app/lib/api/client';
-import { WebApiResponse, LoginResponseData } from '@/app/lib/api/auth';
+import { WebApiResponse, LoginResponseData, SubscriptionStatusResponse } from '@/app/lib/api/auth';
 
 /**
  * 소셜 액세스 토큰으로 로그인하고 httpOnly 쿠키에 토큰을 저장합니다.
@@ -138,14 +138,7 @@ export async function deleteAccountAction(): Promise<{
  */
 export async function getSubscriptionStatusAction(): Promise<{
   success: boolean;
-  data?: {
-    status: string;
-    active: boolean;
-    currentPeriodStart: string;
-    nextBillingDate: string;
-    validUntil: string;
-    canceledAt?: string;
-  };
+  data?: SubscriptionStatusResponse;
   message?: string;
 }> {
   try {
@@ -154,14 +147,7 @@ export async function getSubscriptionStatusAction(): Promise<{
     const apiClient = await getServerApiClient();
     
     console.log('[getSubscriptionStatusAction] API 클라이언트 생성 완료, 요청 전송 중...');
-    const response = await apiClient.get<WebApiResponse<{
-      status: string;
-      active: boolean;
-      currentPeriodStart: string;
-      nextBillingDate: string;
-      validUntil: string;
-      canceledAt?: string;
-    }>>('/api/subscription/status');
+    const response = await apiClient.get<WebApiResponse<SubscriptionStatusResponse>>('/api/subscription/status');
 
     console.log('[getSubscriptionStatusAction] API 응답:', {
       success: response.data.success,
@@ -171,11 +157,6 @@ export async function getSubscriptionStatusAction(): Promise<{
     });
 
     if (response.data.success && response.data.data) {
-      console.log('[getSubscriptionStatusAction] 구독 상태 조회 성공:', {
-        active: response.data.data.active,
-        status: response.data.data.status,
-        validUntil: response.data.data.validUntil,
-      });
       return {
         success: true,
         data: response.data.data,
