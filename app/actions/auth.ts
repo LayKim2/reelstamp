@@ -23,9 +23,13 @@ export async function loginWithSocialAction(
       }
     );
 
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.message || '로그인 데이터가 올바르지 않습니다.');
+    }
+
     const { tokenInfo, userInfo } = response.data.data;
     const cookieStore = await cookies();
-
+    
     cookieStore.set('accessToken', tokenInfo.accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

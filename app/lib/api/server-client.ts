@@ -183,9 +183,6 @@ export async function getServerAiApiClient(): Promise<AxiosInstance> {
     timeout: API_CONFIG.TIMEOUT,
   });
 
-  // 공통 인터셉터 설정 (로깅 등)
-  setupInterceptors(client, 'Server AI API');
-
   client.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
       try {
