@@ -1,0 +1,20 @@
+# Project Guidelines
+
+이 프로젝트의 모든 구현은 다음 가이드라인을 기본으로 참조해야 합니다:
+
+## 필수 참조 문서
+- `PROJECT_GUIDELINES.md` - 프로젝트 전체 가이드라인
+- `docs/` 폴더의 모든 문서들
+
+## 기본 원칙
+1. 모든 기능 구현 시 PROJECT_GUIDELINES.md를 먼저 확인
+2. API 라우트는 docs/api-guidelines.md 참조
+3. DB 처리 방식은 docs/database-guidelines.md 참조
+4. 프로젝트 구조는 docs/project-structure.md 참조
+
+## 구현 시 체크리스트
+- [ ] PROJECT_GUIDELINES.md 확인
+- [ ] 관련 docs/ 문서 확인
+- [ ] 가이드라인에 맞는 구조로 구현
+- [ ] 주석으로 기능 설명 추가
+

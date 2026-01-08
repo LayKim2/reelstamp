@@ -1,0 +1,55 @@
+/* 전역 CSS 파일: Tailwind CSS와 커스텀 CSS 변수 설정 */
+@import "tailwindcss";
+
+/* CSS 변수 정의: 라이트 모드용 색상 */
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  background: linear-gradient(to bottom right, rgba(253, 244, 255, 0.2), white, rgba(255, 237, 213, 0.2));
+}
+
+body {
+  background: linear-gradient(to bottom right, rgba(253, 244, 255, 0.2), white, rgba(255, 237, 213, 0.2));
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Instagram Embed 스타일 */
+.instagram-embed-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.instagram-embed-container iframe {
+  display: block;
+  border: none;
+}
+
+/* Instagram "이 게시물 보기" 텍스트 숨기기 */
+.instagram-media p,
+.instagram-media a[href*="instagram.com"]:not([href*="/reel/"]):not([href*="/p/"]),
+.instagram-media div > a[target="_blank"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Instagram 하단 링크 영역 숨기기 */
+.instagram-media > div:last-child,
+.instagram-media > div > a:last-child {
+  display: none !important;
+}
+
