@@ -70,15 +70,14 @@ export default function PricingPage() {
             features={freePlanFeatures}
             eventBenefit={freePlanEventBenefit}
             buttonType="button"
-            buttonText={isAuthenticated && !isLoadingSubscription && isFreePlan ? '현재 플랜' : '무료 플랜 시작하기'}
+            buttonText="무료 플랜 시작하기"
             buttonOnClick={() => {
               if (!isAuthenticated) {
                 router.push('/login');
                 return;
               }
-              // Free 플랜 시작 로직 (추후 구현)
             }}
-            isCurrentPlan={isAuthenticated && !isLoadingSubscription && isFreePlan}
+            hideButton={isAuthenticated && !isLoadingSubscription}
             buttonClassName="bg-gray-700 text-white hover:bg-gray-800"
           />
 

@@ -44,7 +44,7 @@ export default async function RootLayout({
   const initialUser = await getCurrentUser();
 
   return (
-    <html lang="ko" className="bg-gradient-to-br from-pink-50/20 via-white to-orange-50/20">
+    <html lang="ko" className="h-full">
       <head>
         {/* Instagram 도메인 사전 연결 - 로딩 속도 최적화 */}
         <link rel="preconnect" href="https://www.instagram.com" />
@@ -53,20 +53,17 @@ export default async function RootLayout({
         <link rel="dns-prefetch" href="https://static.cdninstagram.com" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col bg-gradient-to-br from-pink-50/20 via-white to-orange-50/20`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased h-full`}
       >
         <QueryProvider>
           <AuthProvider initialUser={initialUser}>
-            {/* 공통 헤더 */}
-            <Header />
-            
-            {/* 메인 콘텐츠 영역 */}
-            <main className="flex-1">
-              {children}
-            </main>
-
-            {/* 공통 푸터 */}
-            <Footer />
+            <div className="min-h-full flex flex-col bg-gradient-to-br from-pink-50/20 via-white to-orange-50/20">
+              <Header />
+              <main className="flex-1 w-full">
+                {children}
+              </main>
+              <Footer />
+            </div>
           </AuthProvider>
         </QueryProvider>
 

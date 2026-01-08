@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Video, X, Paperclip, Loader2, RefreshCw, HelpCircle } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
+import Image from 'next/image';
 import LoadingOverlay from '@/app/components/ui/LoadingOverlay';
 import { useGenerateScript } from '@/app/hooks/useGenerateScript';
 import { REEL_CATEGORY_MAP, REEL_LENGTH_MAP, REEL_CATEGORY_OPTIONS, REEL_LENGTH_OPTIONS } from '@/app/lib/constants/reels-creation';
@@ -220,6 +221,17 @@ export default function ScriptCreationPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-pink-50/30">
+      {/* 로딩 GIF 미리 로드 (Preload) */}
+      <div className="hidden" aria-hidden="true">
+        <Image
+          src="/images/reelstamp_loading.gif"
+          alt="Preload"
+          width={1}
+          height={1}
+          priority
+          unoptimized
+        />
+      </div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {/* 페이지 헤더 */}
         <div className="mb-8 text-center">

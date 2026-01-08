@@ -23,10 +23,20 @@ export default function LoginClient() {
   const [error, setError] = useState<string | null>(null);
   const [loadingText, setLoadingText] = useState('로그인 중...');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // 초기 마운트 시 URL 확인
+  useEffect(() => {
+    setMounted(true);
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('code')) {
+      setIsProcessing(true);
+    }
+  }, []);
 
   // 이미 로그인된 경우 리다이렉트
   useEffect(() => {
-    if (isAuthenticated && !isProcessing) {
+    if (isAuthenticated && !isProcessing && mounted) {
       const rawPath = sessionStorage.getItem('previousPath');
       const previousPath = rawPath && !rawPath.includes('/login') ? rawPath : '/';
       sessionStorage.removeItem('previousPath');
@@ -208,10 +218,13 @@ export default function LoginClient() {
     window.location.href = naverAuthUrl;
   };
 
-  // 이미 로그인된 경우 아무것도 렌더링하지 않음 (SSR 리다이렉트 보조)
-  if (isAuthenticated && !isProcessing) {
+  // 이미 로그인되었거나 아직 마운트 전이면 아무것도 렌더링하지 않음
+  if (!mounted || (isAuthenticated && !isProcessing)) {
     return null;
   }
+
+  // 로딩 오버레이 표시 여부 결정
+  const showOverlay = isLoadingKakao || isLoadingNaver || isProcessing;
 
   return (
     <div className="min-h-screen bg-white flex flex-col items-center justify-start px-4 pt-20 sm:pt-32">
@@ -225,74 +238,72 @@ export default function LoginClient() {
       />
 
       <div className="w-full max-w-md space-y-8">
-        <div className="text-center">
-          <p className="text-gray-700 text-lg mb-3 md:mb-6">
-            100만뷰 릴스 제작 파트너
-          </p>
-          
-          <div className="mb-6 md:mb-12">
-            <span 
-              className="text-5xl md:text-6xl font-bold leading-[150%] tracking-[-0.05em] block"
-              style={{ 
-                fontFamily: 'Helvetica, Arial, sans-serif',
-                color: '#FF496D',
-              }}
-            >
-              Reelstamp
-            </span>
-          </div>
-        </div>
+        {/* 로그인 처리 중이 아닐 때만 실제 콘텐츠 노출 (깜빡임 방지) */}
+        {!showOverlay ? (
+          <>
+            <div className="text-center">
+              <p className="text-gray-700 text-lg mb-3 md:mb-6">
+                100만뷰 릴스 제작 파트너
+              </p>
+              
+              <div className="mb-6 md:mb-12">
+                <span 
+                  className="text-5xl md:text-6xl font-bold leading-[150%] tracking-[-0.05em] block"
+                  style={{ 
+                    fontFamily: 'Helvetica, Arial, sans-serif',
+                    color: '#FF496D',
+                  }}
+                >
+                  Reelstamp
+                </span>
+              </div>
+            </div>
 
-        <div className="space-y-2 md:space-y-3">
-          <button
-            type="button"
-            className={`w-full h-14 rounded-xl transition-all ${
-              isLoadingNaver
-                ? 'opacity-70 cursor-not-allowed pointer-events-none'
-                : 'cursor-pointer active:scale-[0.98] hover:opacity-90'
-            }`}
-            aria-label="네이버로 로그인"
-            onClick={handleNaverLogin}
-            disabled={isLoadingNaver}
-          >
-            <Image
-              src="/images/login_naver.png"
-              alt="네이버로 로그인"
-              width={400}
-              height={56}
-              className="w-full h-full object-contain rounded-xl"
-              priority
-            />
-          </button>
+            <div className="space-y-2 md:space-y-3">
+              <button
+                type="button"
+                className="w-full h-14 rounded-xl transition-all cursor-pointer active:scale-[0.98] hover:opacity-90"
+                aria-label="네이버로 로그인"
+                onClick={handleNaverLogin}
+              >
+                <Image
+                  src="/images/login_naver.png"
+                  alt="네이버로 로그인"
+                  width={400}
+                  height={56}
+                  className="w-full h-full object-contain rounded-xl"
+                  priority
+                />
+              </button>
 
-          <button
-            type="button"
-            className={`w-full h-14 rounded-xl transition-all ${
-              isLoadingKakao
-                ? 'opacity-70 cursor-not-allowed pointer-events-none'
-                : 'cursor-pointer active:scale-[0.98] hover:opacity-90'
-            }`}
-            aria-label="카카오톡으로 로그인"
-            onClick={handleKakaoLogin}
-            disabled={isLoadingKakao}
-          >
-            <Image
-              src="/images/login_kakao.png"
-              alt="카카오톡으로 로그인"
-              width={400}
-              height={56}
-              className="w-full h-full object-contain rounded-xl"
-              priority
-            />
-          </button>
-        </div>
+              <button
+                type="button"
+                className="w-full h-14 rounded-xl transition-all cursor-pointer active:scale-[0.98] hover:opacity-90"
+                aria-label="카카오톡으로 로그인"
+                onClick={handleKakaoLogin}
+              >
+                <Image
+                  src="/images/login_kakao.png"
+                  alt="카카오톡으로 로그인"
+                  width={400}
+                  height={56}
+                  className="w-full h-full object-contain rounded-xl"
+                  priority
+                />
+              </button>
+            </div>
 
-        {error && (
-          <p className="text-center text-red-500 text-sm mt-4 font-medium">{error}</p>
+            {error && (
+              <p className="text-center text-red-500 text-sm mt-4 font-medium">{error}</p>
+            )}
+          </>
+        ) : (
+          /* 로딩 중일 때는 레이아웃 유지를 위한 빈 공간 */
+          <div className="h-64" />
         )}
       </div>
 
-      <LoadingOverlay isVisible={isLoadingKakao || isLoadingNaver} text={loadingText} />
+      <LoadingOverlay isVisible={showOverlay} text={loadingText} />
     </div>
   );
 }

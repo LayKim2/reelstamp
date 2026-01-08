@@ -31,6 +31,7 @@ interface PlanCardProps {
   buttonOnClick?: () => void;
   isCurrentPlan?: boolean;
   buttonDisabled?: boolean;
+  hideButton?: boolean;
   buttonClassName?: string;
 }
 
@@ -47,11 +48,14 @@ export default function PlanCard({
   buttonOnClick,
   isCurrentPlan = false,
   buttonDisabled = false,
+  hideButton = false,
   buttonClassName = '',
 }: PlanCardProps) {
   return (
     <div 
-      className="flex flex-col justify-between items-start p-[25px] w-full lg:w-[326px] lg:min-h-[553px] rounded-[20px]"
+      className={`flex flex-col justify-between items-start p-[25px] w-full lg:w-[326px] lg:min-h-[553px] rounded-[20px] transition-all ${
+        isCurrentPlan ? 'border-4 border-[#FF496D] shadow-lg scale-[1.02]' : 'border border-transparent'
+      }`}
       style={{
         background: 'linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.3) 100%), #F7F7FA',
       }}
@@ -143,25 +147,27 @@ export default function PlanCard({
       </div>
 
       {/* 버튼 */}
-      {buttonType === 'link' && buttonHref ? (
-        <Link
-          href={buttonHref}
-          className={`w-full py-3 px-4 rounded-xl font-bold transition-colors text-center ${buttonClassName}`}
-        >
-          {buttonText}
-        </Link>
-      ) : (
-        <button
-          onClick={buttonOnClick}
-          disabled={buttonDisabled || isCurrentPlan}
-          className={`w-full py-3 px-4 rounded-xl font-bold transition-colors ${
-            buttonDisabled || isCurrentPlan
-              ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
-              : buttonClassName
-          }`}
-        >
-          {buttonText}
-        </button>
+      {!hideButton && (
+        buttonType === 'link' && buttonHref && !isCurrentPlan ? (
+          <Link
+            href={buttonHref}
+            className={`w-full py-3 px-4 rounded-xl font-bold transition-colors text-center ${buttonClassName}`}
+          >
+            {buttonText}
+          </Link>
+        ) : (
+          <button
+            onClick={buttonOnClick}
+            disabled={buttonDisabled || isCurrentPlan}
+            className={`w-full py-3 px-4 rounded-xl font-bold transition-colors ${
+              buttonDisabled || isCurrentPlan
+                ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                : buttonClassName
+            }`}
+          >
+            {buttonText}
+          </button>
+        )
       )}
     </div>
   );

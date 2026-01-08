@@ -14,8 +14,11 @@
   --font-mono: var(--font-geist-mono);
 }
 
-html {
-  background: linear-gradient(to bottom right, rgba(253, 244, 255, 0.2), white, rgba(255, 237, 213, 0.2));
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 body {
