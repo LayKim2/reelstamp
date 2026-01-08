@@ -17,7 +17,8 @@
 - **프레임워크**: Next.js 13+ (App Router)
 - **언어**: TypeScript
 - **스타일링**: Tailwind CSS (기본 스타일링 및 레이아웃)
-- **UI 라이브러리**: Chakra UI (보완적 사용 - 빠른 컴포넌트 및 접근성)
+- **애니메이션**: Framer Motion
+- **아이콘**: Lucide React
 - **백엔드**: Supabase (인증, DB, 스토리지)
 - **상태 관리**: React Query (서버 상태 + 데이터 페칭)
 - **HTTP 클라이언트**: Axios
@@ -404,7 +405,7 @@ export function useUsers() {
 ```
 
 #### Supabase 데이터 페칭 필수 규칙
-- **항상 Hook으로 구현**: Supabase에서 데이터를 가져올 때는 반드시 `app/hooks/`에 커스텀 Hook을 만들어서 `useQuery`와 함께 사용
+- **항항 Hook으로 구현**: Supabase에서 데이터를 가져올 때는 반드시 `app/hooks/`에 커스텀 Hook을 만들어서 `useQuery`와 함께 사용
 - **useQuery 필수 사용**: `useState`와 `useEffect`로 직접 구현하지 않고, React Query의 `useQuery`를 사용하여 서버 상태 관리
 - **staleTime 설정 필수**: 모든 Supabase 쿼리에는 적절한 `staleTime`을 설정하여 캐싱 최적화
   - 기본값: `staleTime: 5 * 60 * 1000` (5분)
@@ -856,86 +857,37 @@ export const API_ENDPOINTS = {
 
 ### 스타일링 규칙
 
-#### UI 라이브러리 사용 원칙
+#### 스타일링 원칙
 
 ##### Tailwind CSS (기본)
-- **역할**: 기본 스타일링과 레이아웃 처리
-- **우선순위**: 대부분의 스타일링은 Tailwind CSS로 처리
+- **역할**: 모든 스타일링과 레이아웃 처리
+- **우선순위**: 프로젝트의 모든 UI는 Tailwind CSS로 구현
 - **사용 범위**:
   - 레이아웃 (Grid, Flexbox)
-  - 간단한 컴포넌트 스타일링
+  - 모든 컴포넌트 스타일링
   - 반응형 디자인
   - 커스텀 디자인 시스템
 
-##### Chakra UI (보완적)
-- **역할**: 빠르고 접근성 좋은 컴포넌트 제공
-- **사용 시기**:
-  - 복잡한 UI 컴포넌트가 빠르게 필요할 때
-  - 접근성(A11y)이 중요한 컴포넌트
-  - 폼 컴포넌트 (FormControl, Input, Select 등)
-  - 모달, 토스트, 드로어 등 복잡한 컴포넌트
-- **사용 원칙**:
-  - Tailwind로 충분하면 Tailwind 사용
-  - Chakra UI는 필요한 경우에만 보완적으로 사용
-  - 두 라이브러리를 함께 사용 가능 (Chakra 컴포넌트에 Tailwind 클래스 적용 가능)
+##### 애니메이션 및 아이콘
+- **Framer Motion**: 복잡한 인터랙션 및 애니메이션 처리
+- **Lucide React**: 일관된 아이콘 시스템 사용
 
-#### Tailwind CSS 사용
+#### Tailwind CSS 사용 규칙
 - **유틸리티 클래스 우선**: 인라인 스타일 최소화
-- **커스텀 클래스**: `@apply` 지시어 사용 (제한적)
 - **반응형 디자인**: `sm:`, `md:`, `lg:` 등 브레이크포인트 활용
-
-#### Chakra UI 사용
-- **Provider 설정**: `app/providers/`에서 ChakraProvider 설정
-- **테마 커스터마이징**: 필요시 `app/lib/chakra/theme.ts`에서 테마 수정
-- **컴포넌트 import**: `@chakra-ui/react`에서 필요한 컴포넌트만 import
-- **Tailwind와 함께 사용**: Chakra 컴포넌트에 `className` prop으로 Tailwind 클래스 추가 가능
-
-#### 컴포넌트 스타일링
-- **기본**: Tailwind CSS 유틸리티 클래스 사용
-- **복잡한 컴포넌트**: Chakra UI 컴포넌트 사용
 - **조건부 스타일**: `clsx` 또는 `cn` 유틸리티 함수 사용
-- **다크 모드**: Tailwind `dark:` 접두사 또는 Chakra UI ColorMode 사용
-
-#### 스타일 파일
-- **전역 스타일**: `app/globals.css`에만 정의
-- **컴포넌트별 CSS**: 가능한 한 Tailwind 클래스로 처리
-- **Chakra UI 스타일**: Chakra 컴포넌트의 style props 사용
 
 #### 사용 예시
 ```typescript
-// Tailwind CSS 사용 (기본)
-export default function Card() {
+// Tailwind CSS 사용 예시
+export default function Card({ title, children }: { title: string, children: React.ReactNode }) {
   return (
-    <div className="rounded-lg p-4 bg-white shadow-md">
-      <h2 className="text-xl font-bold">Title</h2>
+    <div className="rounded-xl p-6 bg-white shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
+      <h2 className="text-xl font-bold text-gray-900 mb-4">{title}</h2>
+      <div className="text-gray-600 leading-relaxed">
+        {children}
+      </div>
     </div>
-  );
-}
-
-// Chakra UI 사용 (보완적)
-'use client';
-
-import { Box, Button, Modal, ModalOverlay, ModalContent } from '@chakra-ui/react';
-
-export default function UserModal() {
-  return (
-    <Modal isOpen={isOpen} onClose={onClose}>
-      <ModalOverlay />
-      <ModalContent>
-        {/* 모달 내용 */}
-      </ModalContent>
-    </Modal>
-  );
-}
-
-// Tailwind와 Chakra UI 함께 사용
-import { Box } from '@chakra-ui/react';
-
-export default function HybridComponent() {
-  return (
-    <Box className="rounded-lg p-4">
-      {/* Chakra 컴포넌트에 Tailwind 클래스 적용 */}
-    </Box>
   );
 }
 ```
@@ -944,4 +896,4 @@ export default function HybridComponent() {
 
 ## 업데이트 이력
 - 2025-01-XX: 초기 가이드라인 작성
-
+- 2026-01-08: 미사용 라이브러리(Chakra UI, Three.js) 제거 및 Tailwind CSS 중심 가이드로 업데이트
