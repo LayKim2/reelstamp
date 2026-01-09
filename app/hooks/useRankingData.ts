@@ -77,11 +77,12 @@ async function fetchRankingData(category: Category): Promise<RankingItem[]> {
 }
 
 // 랭킹 데이터 페칭 훅
-export function useRankingData(category: Category) {
+export function useRankingData(category: Category, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['ranking', category], // 쿼리 키: 카테고리별로 캐시 관리
     queryFn: () => fetchRankingData(category),
     staleTime: 5 * 60 * 1000, // 5분간 fresh 상태 유지
+    enabled: options?.enabled !== false, // enabled 옵션이 false가 아니면 활성화
   });
 }
 

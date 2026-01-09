@@ -123,7 +123,6 @@ export default function UserReviewCarousel() {
                       width={96}
                       height={96}
                       className="w-full h-full object-cover"
-                      unoptimized
                     />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-blue-200 to-yellow-200"></div>

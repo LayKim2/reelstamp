@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
 
     console.log('[PayApp Recurring Link Response]', {
       state: payappResponse.state,
-      mul_no: payappResponse.mul_no,
+      
       billingKey: payappResponse.billingKey,
       payurl: payappResponse.payurl,
       errorMessage: payappResponse.errorMessage
@@ -95,39 +95,48 @@ export async function POST(request: NextRequest) {
       // rebillRegist 성공 시:
       // - payurl: 최초 결제/승인용 결제창 URL
       // - billingKey: PayApp 정기결제 등록번호 (rebill_no)
-      const orderId = payappResponse.mul_no; // 일부 케이스에서 내려올 수 있는 거래/주문 ID (없을 수도 있음)
+      const orderId = internalOrderId; // PayApp 주문 ID 또는 내부 주문 ID
       const billingKey = payappResponse.billingKey; // 정기결제용 등록번호(rebill_no)
 
-      /**
-       * TODO: 주문 레코드 생성 API 연동
-       *
-       * 요구사항:
-       * 1. 결제 버튼을 눌렀을 때 정기결제 등록/구독 정보 저장
-       * 2. rebillRegist 응답에서 받은 billingKey(rebill_no)를 구독 엔티티에 저장
-       * 3. 저장 필드 예시:
-       *    - subscriptionId: string
-       *    - userId: string (user.id)
-       *    - planId: string (planId)
-       *    - amount: number (price)
-       *    - billingKey: string | null (payappResponse.billingKey)
-       *    - status: 'ACTIVE' | 'PENDING'
-       *    - currentPeriodStart: Date
-       *    - nextBillingDate: Date
-       *
-       * 구현 방식 제안:
-       * - Web API 서버(8082)에 /api/subscription/subscribe (또는 /api/subscriptions) 엔드포인트를 두고,
-       *   여기서는 getServerApiClient() + access token 으로 호출
-       * - 이 라우트에서는 아직 해당 API가 없으므로 실제 호출은 나중에 구현
-       */
-      // 예시 코드 (실제 API 구현 후 주석 제거 예정)
-      // const { getServerApiClient } = await import('@/app/lib/api/server-client');
-      // const apiClient = await getServerApiClient();
-      // await apiClient.post('/api/subscription/subscribe', {
-      //   userId: user.id,
-      //   planCode: planId,
-      //   amount: price,
-      //   billingKey,
-      // });
+      // 6. 내부 API 서버로 빌링 정보 전송
+      try {
+        const billingResponse = await fetch(`${baseUrl}/api/billing/start`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: user.id,
+            billingKey,
+            planCode: planId,
+            orderId,
+          }),
+        });
+
+        const billingResult = await billingResponse.json();
+
+        if (!billingResult.success) {
+          console.error('[Billing Start Failed]', billingResult);
+          return NextResponse.json(
+            {
+              success: false,
+              message: billingResult.message || '빌링 정보 저장 중 오류가 발생했습니다.',
+            },
+            { status: 500 }
+          );
+        }
+
+        console.log('[Billing Start Success]', billingResult);
+      } catch (billingError) {
+        console.error('[Billing Start API Error]', billingError);
+        return NextResponse.json(
+          {
+            success: false,
+            message: '빌링 정보 저장 중 오류가 발생했습니다.',
+          },
+          { status: 500 }
+        );
+      }
 
       return NextResponse.json({
         success: true,

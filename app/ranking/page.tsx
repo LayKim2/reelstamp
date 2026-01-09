@@ -1,13 +1,18 @@
 // 랭킹 페이지: 릴스 랭킹 서비스 - Supabase에서 실시간 랭킹 데이터를 가져와 표시
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { Category, CATEGORY_NAMES } from '@/app/types/ranking';
 import { useRankingData } from '@/app/hooks/useRankingData';
 import { useTodayCreator } from '@/app/hooks/useTodayCreator';
-import InstagramEmbed from '@/app/components/ui/InstagramEmbed';
-import { Crown, Eye, Instagram, Loader2 } from 'lucide-react';
-import TodayCreatorSection from '@/app/components/features/TodayCreatorSection';
+import RankingCard from '@/app/components/ui/RankingCard';
+import { Loader2 } from 'lucide-react';
+
+// 지연 로드: "오늘의 크리에이터" 탭을 열 때만 필요
+const TodayCreatorSection = dynamic(() => import('@/app/components/features/TodayCreatorSection'), {
+  ssr: false,
+});
 
 type TabType = 'trend' | 'creator';
 
@@ -15,13 +20,17 @@ export default function RankingPage() {
   const [activeTab, setActiveTab] = useState<TabType>('trend');
   const [selectedCategory, setSelectedCategory] = useState<Category>('trend');
 
-  // 오늘의 크리에이터 데이터 페칭
+  // 오늘의 크리에이터 데이터 페칭 (탭이 'creator'일 때만 활성화)
   const { data: todayCreatorData, isLoading: isTodayCreatorLoading, error: todayCreatorError } = useTodayCreator();
   
-  // 모든 카테고리의 데이터를 미리 가져오기 (DOM 유지를 위해)
+  // 초기 로드 최적화: 선택된 카테고리만 먼저 로드, 나머지는 백그라운드에서 로드
   const { data: trendData = [], isLoading: trendLoading, error: trendError } = useRankingData('trend');
-  const { data: knowledgeData = [], isLoading: knowledgeLoading, error: knowledgeError } = useRankingData('knowledge');
-  const { data: reviewData = [], isLoading: reviewLoading, error: reviewError } = useRankingData('review');
+  const { data: knowledgeData = [], isLoading: knowledgeLoading, error: knowledgeError } = useRankingData('knowledge', {
+    enabled: selectedCategory === 'knowledge' || (!trendLoading && trendData.length > 0), // 선택된 카테고리이거나 trend 로드 완료 후
+  });
+  const { data: reviewData = [], isLoading: reviewLoading, error: reviewError } = useRankingData('review', {
+    enabled: selectedCategory === 'review' || (!trendLoading && trendData.length > 0), // 선택된 카테고리이거나 trend 로드 완료 후
+  });
 
   // 지연 로딩을 위한 상태 (카테고리별로 관리)
   const [visibleCount, setVisibleCount] = useState<Record<Category, number>>({
@@ -29,63 +38,123 @@ export default function RankingPage() {
     knowledge: 4,
     review: 4
   });
-  const [isLazyLoading, setIsLazyLoading] = useState<Record<Category, boolean>>({
+  // 카테고리별 스크롤 상태: 각 카테고리에서 사용자가 스크롤을 시작했는지 추적
+  const [hasScrolledByCategory, setHasScrolledByCategory] = useState<Record<Category, boolean>>({
     trend: false,
     knowledge: false,
     review: false
   });
 
-  // 스크롤 감지를 위한 Ref
-  const loaderRef = useRef<HTMLDivElement>(null);
+  // 스크롤 감지를 위한 Ref (카테고리별로 관리)
+  const loaderRefs = useRef<{ [key in Category]?: HTMLDivElement | null }>({});
 
-  // Intersection Observer 설정: 스크롤이 하단에 도달하면 추가 데이터 로드
+  // 선택된 카테고리에 맞는 데이터와 로딩/에러 상태 가져오기 (메모이제이션)
+  const getCategoryData = useMemo(() => {
+    const dataMap = {
+      trend: { data: trendData, isLoading: trendLoading, error: trendError },
+      knowledge: { data: knowledgeData, isLoading: knowledgeLoading, error: knowledgeError },
+      review: { data: reviewData, isLoading: reviewLoading, error: reviewError },
+    };
+    return (category: Category) => dataMap[category];
+  }, [trendData, trendLoading, trendError, knowledgeData, knowledgeLoading, knowledgeError, reviewData, reviewLoading, reviewError]);
+
+  // 지연 로딩 핸들러 (메모이제이션)
+  const handleLoadMore = useCallback((category: Category) => {
+    // 5~8위까지 즉시 리스트에 추가 (각 카드의 InstagramEmbed가 자체 로딩을 시작함)
+    setVisibleCount(prev => {
+      if (prev[category] < 8) {
+        return { ...prev, [category]: 8 };
+      }
+      return prev;
+    });
+  }, []);
+
+  // 선택된 카테고리의 로딩 상태 가져오기
+  const selectedCategoryData = getCategoryData(selectedCategory);
+  const selectedCategoryLoading = selectedCategoryData.isLoading;
+
+  // Intersection Observer 인스턴스 저장 (카테고리별로 관리)
+  const observerRefs = useRef<{ [key in Category]?: IntersectionObserver | null }>({});
+
+  // 스크롤 감지: 선택된 카테고리에서 사용자가 스크롤을 시작했는지 확인
   useEffect(() => {
+    if (hasScrolledByCategory[selectedCategory]) return; // 이미 스크롤했으면 리스너 불필요
+    
+    const handleScroll = () => {
+      setHasScrolledByCategory(prev => {
+        if (prev[selectedCategory]) return prev; // 이미 true면 업데이트 불필요
+        return { ...prev, [selectedCategory]: true };
+      });
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [selectedCategory, hasScrolledByCategory]);
+
+  // Intersection Observer 설정: 스크롤이 하단에 도달하면 추가 데이터 로드 (최적화)
+  useEffect(() => {
+    // "오늘의 트렌드" 탭이 아니거나 이미 모두 로드되었으면 Observer 정리만 수행
+    if (activeTab !== 'trend' || visibleCount[selectedCategory] >= 8) {
+      // 기존 Observer 정리
+      const existingObserver = observerRefs.current[selectedCategory];
+      if (existingObserver) {
+        const currentLoader = loaderRefs.current[selectedCategory];
+        if (currentLoader) {
+          existingObserver.unobserve(currentLoader);
+        }
+        observerRefs.current[selectedCategory] = null;
+      }
+      return;
+    }
+
+    // 로딩 중이거나 데이터가 없으면 Observer 설정하지 않음
+    if (selectedCategoryLoading || selectedCategoryData.data.length === 0) {
+      return;
+    }
+
+    // 해당 카테고리에서 사용자가 스크롤을 시작하지 않았으면 Observer 설정하지 않음 (초기 로딩 시 8개 모두 로드 방지)
+    if (!hasScrolledByCategory[selectedCategory]) {
+      return;
+    }
+
+    // 기존 Observer가 있으면 정리
+    const existingObserver = observerRefs.current[selectedCategory];
+    if (existingObserver) {
+      const currentLoader = loaderRefs.current[selectedCategory];
+      if (currentLoader) {
+        existingObserver.unobserve(currentLoader);
+      }
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         const first = entries[0];
-        if (first.isIntersecting && 
-            !isLazyLoading[selectedCategory] && 
-            visibleCount[selectedCategory] < 8 &&
-            activeTab === 'trend') {
+        if (first.isIntersecting && visibleCount[selectedCategory] < 8) {
           handleLoadMore(selectedCategory);
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1 } // rootMargin 제거: 스크롤이 실제로 loaderRef에 도달했을 때만 감지
     );
 
-    const currentLoader = loaderRef.current;
+    observerRefs.current[selectedCategory] = observer;
+
+    // ref가 이미 설정되어 있으면 즉시 Observer 설정
+    const currentLoader = loaderRefs.current[selectedCategory];
     if (currentLoader) {
       observer.observe(currentLoader);
     }
 
     return () => {
-      if (currentLoader) {
+      const currentLoader = loaderRefs.current[selectedCategory];
+      if (currentLoader && observer) {
         observer.unobserve(currentLoader);
       }
+      observerRefs.current[selectedCategory] = null;
     };
-  }, [selectedCategory, isLazyLoading, visibleCount, activeTab, trendLoading, knowledgeLoading, reviewLoading]);
+  }, [selectedCategory, visibleCount, activeTab, handleLoadMore, selectedCategoryLoading, selectedCategoryData.data.length, hasScrolledByCategory]);
 
-  const handleLoadMore = (category: Category) => {
-    // 5~8위까지 즉시 리스트에 추가 (각 카드의 InstagramEmbed가 자체 로딩을 시작함)
-    if (visibleCount[category] < 8) {
-      setVisibleCount(prev => ({ ...prev, [category]: 8 }));
-    }
-  };
-  
-  // 선택된 카테고리에 맞는 데이터와 로딩/에러 상태 가져오기
-  const getCategoryData = (category: Category) => {
-    switch (category) {
-      case 'trend':
-        return { data: trendData, isLoading: trendLoading, error: trendError };
-      case 'knowledge':
-        return { data: knowledgeData, isLoading: knowledgeLoading, error: knowledgeError };
-      case 'review':
-        return { data: reviewData, isLoading: reviewLoading, error: reviewError };
-    }
-  };
-
-  // 랭킹 배지 스타일 함수 (이미지 기준: 1위 핑크/로즈골드, 2위 실버, 3위 브론즈, 4-5위 다크 그레이)
-  const getRankBadgeStyle = (rank: number) => {
+  // 랭킹 배지 스타일 함수 (메모이제이션 - 컴포넌트 외부로 이동 가능하지만 현재 구조 유지)
+  const getRankBadgeStyle = useCallback((rank: number) => {
     switch (rank) {
       case 1:
         return 'bg-gradient-to-br from-[#FF69B4] via-[#FFA500] to-[#FFD700] text-white';
@@ -96,120 +165,20 @@ export default function RankingPage() {
       default:
         return 'bg-gray-700 text-white';
     }
-  };
+  }, []);
 
-  // 랭킹 배지 텍스트
-  const getRankText = (rank: number) => {
-    return `${rank}위`;
-  };
+  // 랭킹 배지 텍스트 (메모이제이션)
+  const getRankText = useCallback((rank: number) => `${rank}위`, []);
 
-  // 카드 렌더링 함수 (모바일)
-  const renderMobileCard = (item: any, category: Category) => (
-    <div
-      key={`${category}-${item.rank}`}
-      className="bg-white rounded-2xl shadow-md border border-gray-200 hover:shadow-2xl hover:scale-[1.02] hover:border-gray-300 transition-all duration-300 ease-out relative overflow-hidden flex flex-col cursor-pointer"
-    >
-      {/* 랭킹 배지와 제목 */}
-      <div className="absolute top-18 left-5 z-10 flex items-center gap-3 max-w-[calc(100%-2.5rem)]">
-        <div
-          className={`px-4 py-2 rounded-full text-sm font-bold flex items-center gap-1.5 shadow-md flex-shrink-0 ${getRankBadgeStyle(
-            item.rank
-          )}`}
-        >
-          {(item.rank === 1 || item.rank === 2 || item.rank === 3) && <Crown className="w-4 h-4" />}
-          {getRankText(item.rank)}
-        </div>
-        {item.title && (
-          <p className="text-lg font-medium text-white truncate drop-shadow-lg">
-            {item.title}
-          </p>
-        )}
-      </div>
+  // 탭 전환 핸들러 (메모이제이션)
+  const handleTabChange = useCallback((tab: TabType) => {
+    setActiveTab(tab);
+  }, []);
 
-      {/* 비디오 영역 - 카드 너비 기준으로 높이 계산하여 하단 UI 숨김 */}
-      <div className="relative w-full overflow-hidden" style={{ paddingBottom: '133.33%', height: 0, maxHeight: '400px' }}>
-        <div className="absolute inset-0 w-full h-full overflow-hidden">
-          <InstagramEmbed 
-            url={item.instagramUrl} 
-            className="w-full h-full" 
-          />
-        </div>
-        {/* 조회수 - 영상 오른쪽 아래 */}
-        <div className="absolute bottom-4 right-4 z-20 flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-black/70 via-black/60 to-black/50 backdrop-blur-md rounded-xl shadow-lg border border-white/10">
-          <Eye className="w-4 h-4 text-white" />
-          <span className="text-sm font-bold text-white tracking-tight">{item.views}</span>
-        </div>
-      </div>
-
-      {/* 하단 정보 영역 - shrink-0로 고정 */}
-      <div className="shrink-0 px-4 pt-3 pb-4 bg-gradient-to-b from-white via-gray-50/50 to-gray-50/30 flex flex-col gap-3 border-t border-gray-200/50">
-        {/* Instagram 버튼 */}
-        <a
-          href={item.instagramUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#FF6B8A] text-white text-sm font-semibold rounded-lg hover:bg-[#FF5A7A] transition-all shadow-sm hover:shadow-md"
-        >
-          <Instagram className="w-4 h-4" />
-          <span>Instagram</span>
-        </a>
-      </div>
-    </div>
-  );
-
-  // 카드 렌더링 함수 (PC)
-  const renderPCCard = (item: any, category: Category) => (
-    <div
-      key={`${category}-${item.rank}`}
-      className="bg-white rounded-2xl shadow-md border border-gray-200 hover:shadow-2xl hover:scale-[1.02] hover:border-gray-300 transition-all duration-300 ease-out relative overflow-hidden flex flex-col cursor-pointer"
-    >
-      {/* 랭킹 배지와 제목 */}
-      <div className="absolute top-18 left-5 z-10 flex items-center gap-3 max-w-[calc(100%-2.5rem)]">
-        <div
-          className={`px-4 py-2 rounded-full text-sm font-bold flex items-center gap-1.5 shadow-md flex-shrink-0 ${getRankBadgeStyle(
-            item.rank
-          )}`}
-        >
-          {(item.rank === 1 || item.rank === 2 || item.rank === 3) && <Crown className="w-4 h-4" />}
-          {getRankText(item.rank)}
-        </div>
-        {item.title && (
-          <p className="text-lg font-medium text-white truncate drop-shadow-lg">
-            {item.title}
-          </p>
-        )}
-      </div>
-
-      {/* 비디오 영역 - 카드 너비 기준으로 높이 계산하여 하단 UI 숨김 */}
-      <div className="relative w-full overflow-hidden" style={{ paddingBottom: '133.33%', height: 0, maxHeight: '400px' }}>
-        <div className="absolute inset-0 w-full h-full overflow-hidden">
-          <InstagramEmbed 
-            url={item.instagramUrl} 
-            className="w-full h-full" 
-          />
-        </div>
-        {/* 조회수 - 영상 오른쪽 아래 */}
-        <div className="absolute bottom-4 right-4 z-20 flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-black/70 via-black/60 to-black/50 backdrop-blur-md rounded-xl shadow-lg border border-white/10">
-          <Eye className="w-4 h-4 text-white" />
-          <span className="text-sm font-bold text-white tracking-tight">{item.views}</span>
-        </div>
-      </div>
-
-      {/* 하단 정보 영역 - shrink-0로 고정 */}
-      <div className="shrink-0 p-4 bg-gradient-to-b from-white via-gray-50/50 to-gray-50/30 flex flex-col gap-3 border-t border-gray-200/50">
-        {/* Instagram 버튼 */}
-        <a
-          href={item.instagramUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#FF6B8A] text-white text-sm font-semibold rounded-lg hover:bg-[#FF5A7A] transition-all shadow-sm hover:shadow-md"
-        >
-          <Instagram className="w-4 h-4" />
-          <span>Instagram</span>
-        </a>
-      </div>
-    </div>
-  );
+  // 카테고리 변경 핸들러 (메모이제이션)
+  const handleCategoryChange = useCallback((category: Category) => {
+    setSelectedCategory(category);
+  }, []);
 
 
   return (
@@ -221,7 +190,7 @@ export default function RankingPage() {
           <div className="px-4 sm:px-6 lg:px-8 mb-6">
             <div className="flex border-b-2 border-pink-200/60 bg-gradient-to-r from-pink-50/40 via-orange-50/30 to-pink-50/40">
               <button
-                onClick={() => setActiveTab('trend')}
+                onClick={() => handleTabChange('trend')}
                 className={`px-4 sm:px-6 md:px-8 py-4 text-base sm:text-lg font-bold transition-all relative rounded-t-xl whitespace-nowrap ${
                   activeTab === 'trend'
                     ? 'text-gray-900 bg-white shadow-lg border-b-2 border-b-white'
@@ -232,7 +201,7 @@ export default function RankingPage() {
                 오늘의 트렌드
               </button>
               <button
-                onClick={() => setActiveTab('creator')}
+                onClick={() => handleTabChange('creator')}
                 className={`px-4 sm:px-6 md:px-8 py-4 text-base sm:text-lg font-bold transition-all relative rounded-t-xl whitespace-nowrap ${
                   activeTab === 'creator'
                     ? 'text-gray-900 bg-white shadow-lg border-b-2 border-b-white'
@@ -255,7 +224,7 @@ export default function RankingPage() {
               return (
                 <button
                   key={category}
-                  onClick={() => setSelectedCategory(category)}
+                  onClick={() => handleCategoryChange(category)}
                   className={`px-4 sm:px-6 py-2 rounded-full text-sm sm:text-base font-semibold transition-all whitespace-nowrap flex-shrink-0 ${
                     isSelected
                       ? 'bg-[#FF6B8A] text-white shadow-md'
@@ -306,7 +275,16 @@ export default function RankingPage() {
                               </div>
                             </div>
                           ))
-                        : categoryData.slice(0, visibleCount[category]).map((item) => renderMobileCard(item, category))
+                        : categoryData.slice(0, visibleCount[category]).map((item) => (
+                            <RankingCard
+                              key={`${category}-${item.rank}`}
+                              item={item}
+                              category={category}
+                              isMobile={true}
+                              getRankBadgeStyle={getRankBadgeStyle}
+                              getRankText={getRankText}
+                            />
+                          ))
                       }
                     </div>
 
@@ -320,15 +298,41 @@ export default function RankingPage() {
                               </div>
                             </div>
                           ))
-                        : categoryData.slice(0, visibleCount[category]).map((item) => renderPCCard(item, category))
+                        : categoryData.slice(0, visibleCount[category]).map((item) => (
+                            <RankingCard
+                              key={`${category}-${item.rank}`}
+                              item={item}
+                              category={category}
+                              isMobile={false}
+                              getRankBadgeStyle={getRankBadgeStyle}
+                              getRankText={getRankText}
+                            />
+                          ))
                       }
                     </div>
                   </>
                 )}
 
-                {/* 지연 로딩 감지용 엘리먼트 (현재 선택된 카테고리에만 Ref 적용) */}
-                {isSelected && visibleCount[category] < 8 && !categoryLoading && categoryData.length > 0 && (
-                  <div ref={loaderRef} className="h-10 w-full" />
+                {/* 지연 로딩 감지용 엘리먼트 (카테고리별 Ref 적용) */}
+                {visibleCount[category] < 8 && !categoryLoading && categoryData.length > 0 && (
+                  <div 
+                    ref={(el) => { 
+                      loaderRefs.current[category] = el;
+                      // ref가 설정되면 즉시 Observer 연결
+                      if (el && category === selectedCategory && activeTab === 'trend') {
+                        const observer = observerRefs.current[category];
+                        if (observer) {
+                          // 약간의 지연을 두어 DOM이 완전히 렌더링된 후 Observer 설정
+                          setTimeout(() => {
+                            if (loaderRefs.current[category] === el) {
+                              observer.observe(el);
+                            }
+                          }, 0);
+                        }
+                      }
+                    }}
+                    className="h-10 w-full" 
+                  />
                 )}
               </div>
             );

@@ -34,6 +34,12 @@ export interface ReelScriptResponse {
   segments?: ScriptSegment[]; // 타임라인별 세그먼트 (새 구조)
   sessionId?: string; // 세션 ID (챗봇 대화 API에 필요)
   revisionId?: string; // 리비전 ID (챗봇 대화 API에 필요)
+  inputSummary?: {
+    reelTopic: string;
+    userRequest: string;
+    extraRequest: string;
+    videoSourceMode: string;
+  }; // 입력 요약 정보 (백엔드 API 응답에 포함될 수 있음)
 }
 
 // 챗봇 대화 요청 타입: 완성된 대본에 대해 챗봇으로 대화하기 위한 요청

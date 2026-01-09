@@ -1,6 +1,5 @@
 // 메인 랜딩 페이지: 루트 경로(/)에서 표시되는 홈 페이지
 // 각 섹션은 최적화를 위해 기능별 컴포넌트로 분리되었습니다.
-'use client';
 
 import React from 'react';
 import dynamic from 'next/dynamic';
@@ -11,38 +10,13 @@ import HeroSection from './components/features/landing/HeroSection';
  * 사용자가 스크롤을 내릴 때 필요한 컴포넌트만 로드하여 초기 번들 크기를 줄이고 로딩 성능을 개선합니다.
  */
 
-const ProblemSolutionSection = dynamic(() => import('./components/features/landing/ProblemSolutionSection'), {
-  ssr: true,
-});
-
-const AlgorithmLogicSection = dynamic(() => import('./components/features/landing/AlgorithmLogicSection'), {
-  ssr: true,
-});
-
-const ClickOnceSection = dynamic(() => import('./components/features/landing/ClickOnceSection'), {
-  ssr: true,
-});
-
-const StepReelsMakerSection = dynamic(() => import('./components/features/landing/StepReelsMakerSection'), {
-  ssr: true,
-});
-
-const UserReviewCarousel = dynamic(() => import('./components/ui/UserReviewCarousel'), {
-  ssr: false,
-  loading: () => (
-    <div className="h-[300px] flex items-center justify-center bg-gray-50 rounded-2xl animate-pulse">
-      <span className="text-gray-400 font-medium">사용자 리뷰를 불러오는 중...</span>
-                  </div>
-  )
-});
-
-const PricingSection = dynamic(() => import('./components/features/landing/PricingSection'), {
-  ssr: true,
-});
-
-const BottomCTASection = dynamic(() => import('./components/features/landing/BottomCTASection'), {
-  ssr: true,
-});
+const ProblemSolutionSection = dynamic(() => import('./components/features/landing/ProblemSolutionSection'));
+const AlgorithmLogicSection = dynamic(() => import('./components/features/landing/AlgorithmLogicSection'));
+const ClickOnceSection = dynamic(() => import('./components/features/landing/ClickOnceSection'));
+const StepReelsMakerSection = dynamic(() => import('./components/features/landing/StepReelsMakerSection'));
+const UserReviewCarousel = dynamic(() => import('./components/ui/UserReviewCarousel'));
+const PricingSection = dynamic(() => import('./components/features/landing/PricingSection'));
+const BottomCTASection = dynamic(() => import('./components/features/landing/BottomCTASection'));
 
 /**
  * 홈 페이지 메인 컴포넌트

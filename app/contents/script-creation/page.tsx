@@ -1,17 +1,22 @@
 // 기획·대본 제작 페이지: 사용자 정보 입력 후 대본 생성
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Video, X, Paperclip, Loader2, RefreshCw, HelpCircle } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
-import LoadingOverlay from '@/app/components/ui/LoadingOverlay';
 import { useGenerateScript } from '@/app/hooks/useGenerateScript';
 import { REEL_CATEGORY_MAP, REEL_LENGTH_MAP, REEL_CATEGORY_OPTIONS, REEL_LENGTH_OPTIONS } from '@/app/lib/constants/reels-creation';
 import { ReelScriptRequest } from '@/app/types/reels-creation';
 import { useAuth } from '@/app/components/providers/AuthProvider';
+
+// 지연 로드: 제출할 때만 필요하므로 초기 번들에서 제외
+const LoadingOverlay = dynamic(() => import('@/app/components/ui/LoadingOverlay'), {
+  ssr: false,
+});
 
 export default function ScriptCreationPage() {
   const router = useRouter();
@@ -44,11 +49,11 @@ export default function ScriptCreationPage() {
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
   const additionalContentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // textarea 높이 자동 조정 함수
-  const adjustTextareaHeight = (textarea: HTMLTextAreaElement) => {
+  // textarea 높이 자동 조정 함수 (메모이제이션)
+  const adjustTextareaHeight = useCallback((textarea: HTMLTextAreaElement) => {
     textarea.style.height = 'auto';
     textarea.style.height = `${textarea.scrollHeight}px`;
-  };
+  }, []);
 
 
   // textarea 초기 높이 설정
@@ -118,8 +123,8 @@ export default function ScriptCreationPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [clickedTooltip]);
 
-  // 파일 선택 핸들러
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 파일 선택 핸들러 (메모이제이션)
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newFiles = Array.from(e.target.files || []);
     
     if (newFiles.length === 0) {
@@ -147,10 +152,10 @@ export default function ScriptCreationPage() {
     } catch (error) {
       console.error('파일 처리 실패:', error);
     }
-  };
+  }, [videoFiles, videoPreviewUrls]);
 
-  // 제출 핸들러
-  const handleSubmit = async (e: React.FormEvent) => {
+  // 제출 핸들러 (메모이제이션)
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
     // 로그인 인증 체크
@@ -217,7 +222,21 @@ export default function ScriptCreationPage() {
       setSubmitError(error instanceof Error ? error.message : '대본 생성 중 오류가 발생했습니다.');
       setIsSubmitting(false);
     }
-  };
+  }, [
+    isAuthenticated,
+    user,
+    pathname,
+    router,
+    category,
+    videoFiles,
+    excludeRecommendedSources,
+    topic,
+    content,
+    videoLength,
+    additionalContent,
+    generateScript,
+    resetApi,
+  ]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-pink-50/30">
