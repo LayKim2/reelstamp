@@ -24,7 +24,8 @@ export interface PayAppRecurringRequest {
   userid: string;           // 판매자 아이디
   goodname: string;         // 상품명
   goodprice: number;        // 정기결제 금액
-  recvphone: string;        // 고객 휴대폰 번호
+  recvphone?: string;        // 고객 휴대폰 번호 (필수, 빈 값이면 결제창에서 입력 가능)
+  recvemail?: string;        // 수신자 이메일 (구매자 이메일)
   rebillCycleType: 'Month' | 'Week' | 'Day'; // 결제 주기 타입
   rebillCycleMonth?: string; // 월 주기인 경우: 매월 결제일 (1~31)
   rebillCycleWeek?: string;  // 주 주기인 경우: 요일
@@ -60,7 +61,7 @@ export async function createPayAppPaymentLink(params: PayAppPaymentRequest): Pro
     formData.append('linkkey', params.linkkey);
     formData.append('goodname', params.goodname);
     formData.append('price', String(params.price));
-    formData.append('recvphone', params.recvphone || '01059601017'); // 휴대폰 번호가 없으면 기본값 설정 (페이앱 필수값인 경우 대응)
+    formData.append('recvphone', params.recvphone || ''); // 휴대폰 번호가 없으면 기본값 설정 (페이앱 필수값인 경우 대응)
     formData.append('memo', params.memo || '');
     formData.append('returnurl', params.returnurl);
     formData.append('feedbackurl', params.feedbackurl);
@@ -116,7 +117,12 @@ export async function createPayAppRecurringLink(
     formData.append('userid', params.userid);
     formData.append('goodname', params.goodname);
     formData.append('goodprice', String(params.goodprice));
-    formData.append('recvphone', params.recvphone);
+    // recvphone은 필수 파라미터 (더미 값 전송, 결제창에서 사용자가 수정 가능)
+    formData.append('recvphone', params.recvphone || '01000000000');
+    // recvemail: 수신자 이메일 (구매자 이메일)
+    if (params.recvemail) {
+      formData.append('recvemail', params.recvemail);
+    }
     formData.append('rebillCycleType', params.rebillCycleType);
 
     if (params.rebillCycleMonth) {
@@ -134,6 +140,15 @@ export async function createPayAppRecurringLink(
     formData.append('var1', params.var1 || '');
     formData.append('var2', params.var2 || '');
     formData.append('var3', params.var3 || '');
+
+    // 디버깅: 실제 전송되는 recvphone, recvemail 값 확인
+    const formDataString = formData.toString();
+    const recvphoneMatch = formDataString.match(/recvphone=([^&]*)/);
+    const recvemailMatch = formDataString.match(/recvemail=([^&]*)/);
+    console.log('[PayApp] 전송되는 구매자 정보:', {
+      recvphone: recvphoneMatch ? decodeURIComponent(recvphoneMatch[1]) : 'not found',
+      recvemail: recvemailMatch ? decodeURIComponent(recvemailMatch[1]) : 'not found',
+    });
 
     const apiUrl = 'https://api.payapp.kr/oapi/apiLoad.html';
 

@@ -5,13 +5,17 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Video, X, Paperclip, Loader2, RefreshCw, HelpCircle } from 'lucide-react';
+import { Video, X, Paperclip, Loader2, RefreshCw, HelpCircle, AlertCircle } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { useGenerateScript } from '@/app/hooks/useGenerateScript';
 import { REEL_CATEGORY_MAP, REEL_LENGTH_MAP, REEL_CATEGORY_OPTIONS, REEL_LENGTH_OPTIONS } from '@/app/lib/constants/reels-creation';
 import { ReelScriptRequest } from '@/app/types/reels-creation';
 import { useAuth } from '@/app/components/providers/AuthProvider';
+
+// 상수
+const MAX_DURATION_SECONDS = 25 * 60; // 1500초
+const MAX_SIZE_BYTES = 400 * 1024 * 1024; // 400MB
 
 // 지연 로드: 제출할 때만 필요하므로 초기 번들에서 제외
 const LoadingOverlay = dynamic(() => import('@/app/components/ui/LoadingOverlay'), {
@@ -31,8 +35,10 @@ export default function ScriptCreationPage() {
   const [videoLength, setVideoLength] = useState('');
   const [additionalContent, setAdditionalContent] = useState('');
   const [isAdditionalOpen, setIsAdditionalOpen] = useState(false);
-  const [videoFiles, setVideoFiles] = useState<File[]>([]);
-  const [videoPreviewUrls, setVideoPreviewUrls] = useState<string[]>([]);
+  // 영상 파일 정보를 ID로 매핑하여 관리
+  const [videoFiles, setVideoFiles] = useState<Array<{ id: string; file: File }>>([]);
+  const [videoPreviewUrls, setVideoPreviewUrls] = useState<Map<string, string>>(new Map());
+  const [videoDurations, setVideoDurations] = useState<Map<string, number>>(new Map()); // 각 영상 파일의 길이(초)
   const [excludeRecommendedSources, setExcludeRecommendedSources] = useState(false); // 입력한 영상 외엔 영상 소스 추천받지 않기
   const [hoverTooltip, setHoverTooltip] = useState<string | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState<{ [key: string]: { top: number; left: number } }>({});
@@ -44,6 +50,7 @@ export default function ScriptCreationPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [loadingText, setLoadingText] = useState('생성 중...');
+  const [showToast, setShowToast] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -55,13 +62,12 @@ export default function ScriptCreationPage() {
     textarea.style.height = `${textarea.scrollHeight}px`;
   }, []);
 
-
   // textarea 초기 높이 설정
   useEffect(() => {
     [contentTextareaRef.current, additionalContentTextareaRef.current].forEach((ref) => {
       if (ref) adjustTextareaHeight(ref);
     });
-  }, []);
+  }, [adjustTextareaHeight]);
 
   // Preview URL cleanup
   useEffect(() => {
@@ -123,36 +129,189 @@ export default function ScriptCreationPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [clickedTooltip]);
 
+  // 토스트 알림 표시 및 자동 닫기
+  useEffect(() => {
+    if (submitError) {
+      setShowToast(true);
+      const timer = setTimeout(() => {
+        setShowToast(false);
+        setTimeout(() => setSubmitError(null), 300); // 애니메이션 완료 후 상태 초기화
+      }, 5000); // 5초 후 자동 닫기
+
+      return () => clearTimeout(timer);
+    }
+  }, [submitError]);
+
+  // 영상 파일의 길이(초)를 가져오는 함수
+  const getVideoDuration = useCallback((file: File): Promise<number> => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      const objectUrl = URL.createObjectURL(file);
+      let timeoutId: NodeJS.Timeout | null = null;
+      
+      const cleanup = () => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+        URL.revokeObjectURL(objectUrl);
+        video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+        video.removeEventListener('error', handleError);
+      };
+      
+      const handleLoadedMetadata = () => {
+        cleanup();
+        const duration = video.duration;
+        
+        // duration 유효성 검사
+        if (!isFinite(duration) || isNaN(duration) || duration <= 0) {
+          reject(new Error('영상 파일의 길이를 확인할 수 없습니다.'));
+          return;
+        }
+        
+        resolve(duration);
+      };
+      
+      const handleError = () => {
+        cleanup();
+        reject(new Error('영상 파일을 읽을 수 없습니다.'));
+      };
+      
+      video.addEventListener('loadedmetadata', handleLoadedMetadata);
+      video.addEventListener('error', handleError);
+      
+      // 타임아웃 설정 (10초)
+      timeoutId = setTimeout(() => {
+        cleanup();
+        reject(new Error('영상 파일 로드 시간이 초과되었습니다.'));
+      }, 10000);
+      
+      video.src = objectUrl;
+      video.load();
+    });
+  }, []);
+
   // 파일 선택 핸들러 (메모이제이션)
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const newFiles = Array.from(e.target.files || []);
     
     if (newFiles.length === 0) {
       if (fileInputRef.current) {
         const dataTransfer = new DataTransfer();
-        videoFiles.forEach((f) => dataTransfer.items.add(f));
+        videoFiles.forEach(({ file }) => dataTransfer.items.add(file));
         fileInputRef.current.files = dataTransfer.files;
       }
       return;
     }
 
     try {
-      const allFiles = [...videoFiles, ...newFiles];
-      const newPreviewUrls = newFiles.map((file) => URL.createObjectURL(file));
-      const allPreviewUrls = [...videoPreviewUrls, ...newPreviewUrls];
+      // 기존 파일들의 총 길이와 용량 계산
+      const existingTotalDuration = Array.from(videoDurations.values()).reduce((sum, duration) => sum + duration, 0);
+      const existingTotalSize = videoFiles.reduce((sum, { file }) => sum + file.size, 0);
+
+      // 새 파일들의 길이 가져오기 및 고유 ID 생성
+      const newFileEntries: Array<{ id: string; file: File }> = [];
+      const newPreviewUrlsMap = new Map<string, string>();
+      const newDurationsMap = new Map<string, number>();
+
+      for (const file of newFiles) {
+        try {
+          const duration = await getVideoDuration(file);
+          
+          // 개별 파일 길이 체크
+          if (duration > MAX_DURATION_SECONDS) {
+            const minutes = Math.floor(duration / 60);
+            const seconds = Math.floor(duration % 60);
+            setSubmitError(`영상 파일 "${file.name}"의 길이가 25분을 초과합니다. (${minutes}분 ${seconds}초)`);
+            return;
+          }
+          
+          // 고유 ID 생성
+          const fileId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${file.name}`;
+          const previewUrl = URL.createObjectURL(file);
+          
+          newFileEntries.push({ id: fileId, file });
+          newPreviewUrlsMap.set(fileId, previewUrl);
+          newDurationsMap.set(fileId, duration);
+        } catch (error) {
+          setSubmitError(error instanceof Error ? error.message : '영상 파일의 길이를 확인할 수 없습니다. 다시 시도해주세요.');
+          return;
+        }
+      }
+
+      // 새 파일들의 총 길이와 용량 계산
+      const newTotalDuration = Array.from(newDurationsMap.values()).reduce((sum, duration) => sum + duration, 0);
+      const newTotalSize = newFiles.reduce((sum, file) => sum + file.size, 0);
+
+      // 제한 체크
+      const totalDuration = existingTotalDuration + newTotalDuration;
+      const totalSize = existingTotalSize + newTotalSize;
+
+      if (totalDuration > MAX_DURATION_SECONDS) {
+        const totalMinutes = Math.floor(totalDuration / 60);
+        const totalSeconds = Math.floor(totalDuration % 60);
+        setSubmitError(`영상 총 길이는 25분 이하여야 합니다. (현재: ${totalMinutes}분 ${totalSeconds}초)`);
+        return;
+      }
+
+      if (totalSize > MAX_SIZE_BYTES) {
+        const totalSizeMB = (totalSize / 1024 / 1024).toFixed(2);
+        setSubmitError(`영상 총 용량은 400MB 이하여야 합니다. (현재: ${totalSizeMB}MB)`);
+        return;
+      }
+
+      // 제한을 통과한 경우 파일 추가
+      const allFiles = [...videoFiles, ...newFileEntries];
+      const allPreviewUrls = new Map([...videoPreviewUrls, ...newPreviewUrlsMap]);
+      const allDurations = new Map([...videoDurations, ...newDurationsMap]);
       
       setVideoFiles(allFiles);
       setVideoPreviewUrls(allPreviewUrls);
+      setVideoDurations(allDurations);
+      setSubmitError(null);
       
       if (fileInputRef.current) {
         const dataTransfer = new DataTransfer();
-        allFiles.forEach((f) => dataTransfer.items.add(f));
+        allFiles.forEach(({ file }) => dataTransfer.items.add(file));
         fileInputRef.current.files = dataTransfer.files;
       }
     } catch (error) {
-      console.error('파일 처리 실패:', error);
+      setSubmitError('파일 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
     }
-  }, [videoFiles, videoPreviewUrls]);
+  }, [videoFiles, videoPreviewUrls, videoDurations, getVideoDuration]);
+
+  // 총 길이 및 용량 계산 (메모이제이션)
+  const totalVideoStats = useMemo(() => {
+    if (videoFiles.length === 0) return { duration: 0, size: 0 };
+    const duration = Array.from(videoDurations.values()).reduce((sum, d) => sum + d, 0);
+    const size = videoFiles.reduce((sum, { file }) => sum + file.size, 0);
+    return { duration, size };
+  }, [videoFiles, videoDurations]);
+
+  // 영상 파일 삭제 핸들러 (메모이제이션)
+  const handleDeleteVideo = useCallback((id: string) => {
+    const urlToRevoke = videoPreviewUrls.get(id);
+    if (urlToRevoke) {
+      URL.revokeObjectURL(urlToRevoke);
+    }
+    
+    const newFiles = videoFiles.filter((item) => item.id !== id);
+    const newPreviewUrls = new Map(videoPreviewUrls);
+    const newDurations = new Map(videoDurations);
+    newPreviewUrls.delete(id);
+    newDurations.delete(id);
+    
+    setVideoFiles(newFiles);
+    setVideoPreviewUrls(newPreviewUrls);
+    setVideoDurations(newDurations);
+    
+    if (fileInputRef.current) {
+      const dataTransfer = new DataTransfer();
+      newFiles.forEach(({ file }) => dataTransfer.items.add(file));
+      fileInputRef.current.files = dataTransfer.files;
+    }
+  }, [videoFiles, videoPreviewUrls, videoDurations]);
 
   // 제출 핸들러 (메모이제이션)
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
@@ -174,6 +333,24 @@ export default function ScriptCreationPage() {
       return;
     }
 
+    // 영상 파일 제한 체크
+    if (videoFiles.length > 0) {
+      const { duration: totalDuration, size: totalSize } = totalVideoStats;
+
+      if (totalDuration > MAX_DURATION_SECONDS) {
+        const totalMinutes = Math.floor(totalDuration / 60);
+        const totalSeconds = Math.floor(totalDuration % 60);
+        setSubmitError(`영상 총 길이는 25분 이하여야 합니다. (현재: ${totalMinutes}분 ${totalSeconds}초)`);
+        return;
+      }
+
+      if (totalSize > MAX_SIZE_BYTES) {
+        const totalSizeMB = (totalSize / 1024 / 1024).toFixed(2);
+        setSubmitError(`영상 총 용량은 400MB 이하여야 합니다. (현재: ${totalSizeMB}MB)`);
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     setSubmitError(null);
     resetApi();
@@ -193,7 +370,7 @@ export default function ScriptCreationPage() {
         user_id: user.id,
         reel_length: videoLength ? REEL_LENGTH_MAP[videoLength] : null,
         extra_request: additionalContent || null,
-        video: videoFiles.length > 0 ? videoFiles : null,
+        video: videoFiles.length > 0 ? videoFiles.map(({ file }) => file) : null,
         video_source_mode: videoSourceMode,
       };
 
@@ -218,7 +395,6 @@ export default function ScriptCreationPage() {
       });
 
     } catch (error) {
-      console.error('제출 실패:', error);
       setSubmitError(error instanceof Error ? error.message : '대본 생성 중 오류가 발생했습니다.');
       setIsSubmitting(false);
     }
@@ -229,6 +405,7 @@ export default function ScriptCreationPage() {
     router,
     category,
     videoFiles,
+    totalVideoStats,
     excludeRecommendedSources,
     topic,
     content,
@@ -380,68 +557,95 @@ export default function ScriptCreationPage() {
                   onClick={() => fileInputRef.current?.click()}
                   className="w-full px-4 py-4 bg-white border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-[#FF6B8A] hover:bg-pink-50/30 transition-all group"
                 >
-                  <div className="flex items-center justify-center gap-3">
-                    <Paperclip className="w-5 h-5 text-gray-400 group-hover:text-[#FF6B8A] transition-colors" />
-                    <span className="text-base text-gray-600 group-hover:text-gray-900">
-                      {videoFiles.length > 0 
-                        ? `${videoFiles.length}개 파일 선택됨`
-                        : '여러 영상 파일 선택 가능'}
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <div className="flex items-center justify-center gap-3">
+                      <Paperclip className="w-5 h-5 text-gray-400 group-hover:text-[#FF6B8A] transition-colors" />
+                      <span className="text-base text-gray-600 group-hover:text-gray-900">
+                        {videoFiles.length > 0 
+                          ? `${videoFiles.length}개 파일 선택됨`
+                          : '여러 영상 파일 선택 가능'}
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-500">
+                      (총 25분, 400MB 이내)
                     </span>
                   </div>
                 </div>
 
                 {/* 체크박스: 입력한 영상 외엔 영상 소스 추천받지 않기 */}
                 {videoFiles.length > 0 && (
-                  <div className="mt-4 flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="excludeRecommendedSources"
-                      checked={excludeRecommendedSources}
-                      onChange={(e) => setExcludeRecommendedSources(e.target.checked)}
-                      className="w-4 h-4 text-[#FF6B8A] border-gray-300 rounded focus:ring-[#FF6B8A] focus:ring-2 cursor-pointer"
-                    />
-                    <label htmlFor="excludeRecommendedSources" className="text-sm text-gray-700 cursor-pointer">
-                      입력한 영상 외엔 영상 소스 추천받지 않기
-                    </label>
-                  </div>
+                  <>
+                    <div className="mt-4 flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="excludeRecommendedSources"
+                        checked={excludeRecommendedSources}
+                        onChange={(e) => setExcludeRecommendedSources(e.target.checked)}
+                        className="w-4 h-4 text-[#FF6B8A] border-gray-300 rounded focus:ring-[#FF6B8A] focus:ring-2 cursor-pointer"
+                      />
+                      <label htmlFor="excludeRecommendedSources" className="text-sm text-gray-700 cursor-pointer">
+                        입력한 영상 외엔 영상 소스 추천받지 않기
+                      </label>
+                    </div>
+                    {/* 총 길이 및 용량 표시 */}
+                    <div className="mt-2 text-xs text-gray-500">
+                      총 길이: {Math.floor(totalVideoStats.duration / 60)}분 {Math.floor(totalVideoStats.duration % 60)}초 / 25분
+                      {' • '}
+                      총 용량: {(totalVideoStats.size / 1024 / 1024).toFixed(2)}MB / 400MB
+                    </div>
+                  </>
                 )}
                 
                 {/* 영상 Preview */}
-                {videoPreviewUrls.length > 0 && (
-                  <div className="mt-4 space-y-3">
-                    {videoFiles.map((file, index) => (
-                      <div key={index} className="relative bg-white border-2 border-gray-200 rounded-xl p-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <Video className="w-6 h-6 text-gray-400" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-base font-medium text-gray-900 truncate">{file.name}</p>
-                            <p className="text-xs text-gray-500 mt-0.5">
-                              {(file.size / 1024 / 1024).toFixed(2)} MB
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const newFiles = videoFiles.filter((_, i) => i !== index);
-                              const newUrls = videoPreviewUrls.filter((_, i) => i !== index);
-                              URL.revokeObjectURL(videoPreviewUrls[index]);
-                              setVideoFiles(newFiles);
-                              setVideoPreviewUrls(newUrls);
-                              if (fileInputRef.current) {
-                                const dataTransfer = new DataTransfer();
-                                newFiles.forEach((f) => dataTransfer.items.add(f));
-                                fileInputRef.current.files = dataTransfer.files;
-                              }
-                            }}
-                            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-                          >
-                            <X className="w-4 h-4 text-gray-400" />
-                          </button>
-                        </div>
+                {videoFiles.length > 0 && (
+                  <div className="mt-4">
+                    <div className="overflow-x-auto pb-4" style={{ scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch' }}>
+                      <div className="flex gap-4" style={{ width: 'max-content' }}>
+                        {videoFiles.map(({ id, file }) => {
+                          const previewUrl = videoPreviewUrls.get(id);
+                          const duration = videoDurations.get(id);
+                          
+                          if (!previewUrl) return null;
+                          
+                          return (
+                            <div key={id} className="relative bg-white border-2 border-gray-200 rounded-xl overflow-hidden group" style={{ width: '280px', flexShrink: 0 }}>
+                              {/* 영상 Preview */}
+                              <div className="relative aspect-video bg-gray-100">
+                                <video
+                                  key={previewUrl}
+                                  src={previewUrl}
+                                  className="w-full h-full object-cover"
+                                  muted
+                                  playsInline
+                                  preload="metadata"
+                                />
+                                {/* 삭제 버튼 */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteVideo(id)}
+                                  className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 rounded-full transition-colors opacity-0 group-hover:opacity-100 z-10"
+                                  aria-label="파일 삭제"
+                                >
+                                  <X className="w-4 h-4 text-white" />
+                                </button>
+                              </div>
+                              {/* 파일 정보 */}
+                              <div className="p-3">
+                                <p className="text-sm font-medium text-gray-900 truncate mb-1">{file.name}</p>
+                                <p className="text-xs text-gray-500">
+                                  {(file.size / 1024 / 1024).toFixed(2)} MB
+                                  {duration !== undefined && !isNaN(duration) && (
+                                    <span className="ml-2">
+                                      • {Math.floor(duration / 60)}분 {Math.floor(duration % 60)}초
+                                    </span>
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -516,13 +720,6 @@ export default function ScriptCreationPage() {
                 </AnimatePresence>
               </div>
 
-              {/* 에러 메시지 */}
-              {submitError && (
-                <div className="p-4 bg-red-50 border-2 border-red-200 rounded-xl">
-                  <p className="text-base text-red-600">{submitError}</p>
-                </div>
-              )}
-
               {/* 제출 버튼 */}
               <button
                 type="submit"
@@ -552,6 +749,42 @@ export default function ScriptCreationPage() {
 
       {/* 로딩 오버레이 */}
       <LoadingOverlay isVisible={isSubmitting} text={loadingText} />
+
+      {/* Toast 알림 */}
+      {mounted && createPortal(
+        <AnimatePresence>
+          {showToast && submitError && (
+            <motion.div
+              initial={{ opacity: 0, y: -50, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+              className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[10000] max-w-md w-full mx-4"
+            >
+              <div className="bg-white border-2 border-red-200 rounded-xl shadow-2xl p-4 flex items-start gap-3">
+                <div className="flex-shrink-0 mt-0.5">
+                  <AlertCircle className="w-5 h-5 text-red-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-red-900">{submitError}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowToast(false);
+                    setTimeout(() => setSubmitError(null), 300);
+                  }}
+                  className="flex-shrink-0 p-1 hover:bg-red-50 rounded transition-colors"
+                  aria-label="닫기"
+                >
+                  <X className="w-4 h-4 text-red-600" />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
 
       {/* Tooltip Portal (PC hover용 말풍선) */}
       {mounted && createPortal(

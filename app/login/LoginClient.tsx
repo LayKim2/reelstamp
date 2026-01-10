@@ -24,25 +24,14 @@ export default function LoginClient() {
   const [loadingText, setLoadingText] = useState('로그인 중...');
   const [isProcessing, setIsProcessing] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [termsAgreed, setTermsAgreed] = useState(false);
+  const [privacyAgreed, setPrivacyAgreed] = useState(false);
+  const [allAgreed, setAllAgreed] = useState(false);
 
-  // 초기 마운트 시 URL 확인
+  // 초기 마운트 시 mounted 상태 설정
   useEffect(() => {
     setMounted(true);
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has('code')) {
-      setIsProcessing(true);
-    }
   }, []);
-
-  // 이미 로그인된 경우 리다이렉트
-  useEffect(() => {
-    if (isAuthenticated && !isProcessing && mounted) {
-      const rawPath = sessionStorage.getItem('previousPath');
-      const previousPath = rawPath && !rawPath.includes('/login') ? rawPath : '/';
-      sessionStorage.removeItem('previousPath');
-      router.replace(previousPath);
-    }
-  }, [isAuthenticated, isProcessing, router]);
 
   // 카카오 SDK 초기화
   const initKakao = () => {
@@ -179,8 +168,27 @@ export default function LoginClient() {
     }
   };
 
+  // 전체 동의 체크박스 핸들러
+  const handleAllAgreed = (checked: boolean) => {
+    setAllAgreed(checked);
+    setTermsAgreed(checked);
+    setPrivacyAgreed(checked);
+  };
+
+  // 개별 약관 체크 시 전체 동의 상태 업데이트
+  useEffect(() => {
+    setAllAgreed(termsAgreed && privacyAgreed);
+  }, [termsAgreed, privacyAgreed]);
+
+  // 약관 동의 여부 확인
+  const isAllAgreed = termsAgreed && privacyAgreed;
+
   // 카카오 로그인 핸들러
   const handleKakaoLogin = () => {
+    if (!isAllAgreed) {
+      setError('약관에 동의해주세요.');
+      return;
+    }
     if (!window.Kakao) {
       setError('카카오 SDK가 로드되지 않았습니다. 잠시 후 다시 시도해주세요.');
       return;
@@ -201,6 +209,10 @@ export default function LoginClient() {
 
   // 네이버 로그인 핸들러
   const handleNaverLogin = () => {
+    if (!isAllAgreed) {
+      setError('약관에 동의해주세요.');
+      return;
+    }
     const clientId = process.env.NEXT_PUBLIC_NAVER_CLIENT_ID;
     if (!clientId) {
       setError('네이버 API 키가 설정되지 않았습니다.');
@@ -218,8 +230,8 @@ export default function LoginClient() {
     window.location.href = naverAuthUrl;
   };
 
-  // 이미 로그인되었거나 아직 마운트 전이면 아무것도 렌더링하지 않음
-  if (!mounted || (isAuthenticated && !isProcessing)) {
+  // 아직 마운트 전이면 아무것도 렌더링하지 않음
+  if (!mounted) {
     return null;
   }
 
@@ -227,7 +239,7 @@ export default function LoginClient() {
   const showOverlay = isLoadingKakao || isLoadingNaver || isProcessing;
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-start px-4 pt-20 sm:pt-32">
+    <div className="bg-white flex flex-col items-center justify-start px-4 py-20 sm:py-20 md:py-28 lg:py-40 xl:py-48 min-h-[calc(100vh-80px)] relative overflow-x-hidden">
       <Script
         src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.0/kakao.min.js"
         strategy="afterInteractive"
@@ -237,16 +249,60 @@ export default function LoginClient() {
         }}
       />
 
-      <div className="w-full max-w-md space-y-8">
+      {/* 배경 디자인 - 모바일 */}
+      <div 
+        className="absolute inset-0 flex items-center justify-center pointer-events-none sm:hidden overflow-hidden"
+        style={{ top: '60%', opacity: 0.25, left: 0, right: 0 }}
+      >
+        <span 
+          className="text-[150px] font-bold whitespace-nowrap"
+          style={{ 
+            fontFamily: 'Helvetica, Arial, sans-serif',
+            fontWeight: 700,
+            lineHeight: '150%',
+            letterSpacing: '-0.05em',
+            background: 'linear-gradient(to bottom, #FFFFFF, #FFB4C7)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}
+        >
+          Reelstamp
+        </span>
+      </div>
+
+      {/* 배경 디자인 - 데스크톱 */}
+      <div 
+        className="hidden sm:flex absolute inset-0 items-center justify-center pointer-events-none overflow-hidden"
+        style={{ top: '30%', opacity: 0.25, left: 0, right: 0 }}
+      >
+        <span 
+          className="text-[250px] md:text-[350px] lg:text-[450px] font-bold whitespace-nowrap"
+          style={{ 
+            fontFamily: 'Helvetica, Arial, sans-serif',
+            fontWeight: 700,
+            lineHeight: '150%',
+            letterSpacing: '-0.05em',
+            background: 'linear-gradient(to bottom, #FFFFFF, #FFB4C7)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}
+        >
+          Reelstamp
+        </span>
+      </div>
+
+      <div className="w-full max-w-md space-y-8 relative z-10">
         {/* 로그인 처리 중이 아닐 때만 실제 콘텐츠 노출 (깜빡임 방지) */}
         {!showOverlay ? (
           <>
             <div className="text-center">
-              <p className="text-gray-700 text-lg mb-3 md:mb-6">
+              <p className="text-gray-700 text-lg mb-1 md:mb-1">
                 100만뷰 릴스 제작 파트너
               </p>
               
-              <div className="mb-6 md:mb-12">
+              <div className="mb-12 md:mb-12">
                 <span 
                   className="text-5xl md:text-6xl font-bold leading-[150%] tracking-[-0.05em] block"
                   style={{ 
@@ -259,12 +315,79 @@ export default function LoginClient() {
               </div>
             </div>
 
+            {/* 약관 동의 체크박스 */}
+            <div className="space-y-3 mb-4 w-full">
+              <div className="w-full">
+                <div className="flex items-center pb-3 border-b border-gray-200 px-4 sm:px-6 md:px-16">
+                  <input
+                    type="checkbox"
+                    id="all-agreement"
+                    checked={allAgreed}
+                    onChange={(e) => handleAllAgreed(e.target.checked)}
+                    className="w-4 h-4 text-[#FF496D] border-gray-300 rounded focus:ring-[#FF496D] cursor-pointer"
+                  />
+                  <label htmlFor="all-agreement" className="ml-2 text-sm font-semibold text-gray-900 cursor-pointer">
+                    전체 동의
+                  </label>
+                </div>
+              </div>
+              <div className="w-full space-y-2 px-4 sm:px-6 md:px-16">
+                <div className="flex items-start">
+                  <input
+                    type="checkbox"
+                    id="terms-agreement"
+                    checked={termsAgreed}
+                    onChange={(e) => setTermsAgreed(e.target.checked)}
+                    className="mt-1 w-4 h-4 text-[#FF496D] border-gray-300 rounded focus:ring-[#FF496D] cursor-pointer"
+                  />
+                  <label htmlFor="terms-agreement" className="ml-2 text-sm text-gray-700 cursor-pointer">
+                    <a
+                      href="/terms-of-service"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#FF496D] hover:underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      서비스 이용약관
+                    </a>
+                    에 동의합니다 (필수)
+                  </label>
+                </div>
+                <div className="flex items-start">
+                  <input
+                    type="checkbox"
+                    id="privacy-agreement"
+                    checked={privacyAgreed}
+                    onChange={(e) => setPrivacyAgreed(e.target.checked)}
+                    className="mt-1 w-4 h-4 text-[#FF496D] border-gray-300 rounded focus:ring-[#FF496D] cursor-pointer"
+                  />
+                  <label htmlFor="privacy-agreement" className="ml-2 text-sm text-gray-700 cursor-pointer">
+                    <a
+                      href="/privacy-policy"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#FF496D] hover:underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      개인정보 처리방침
+                    </a>
+                    에 동의합니다 (필수)
+                  </label>
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-2 md:space-y-3">
               <button
                 type="button"
-                className="w-full h-14 rounded-xl transition-all cursor-pointer active:scale-[0.98] hover:opacity-90"
+                className={`w-full h-14 rounded-xl transition-all active:scale-[0.98] ${
+                  isAllAgreed
+                    ? 'cursor-pointer hover:opacity-90'
+                    : 'cursor-not-allowed opacity-50'
+                }`}
                 aria-label="네이버로 로그인"
                 onClick={handleNaverLogin}
+                disabled={!isAllAgreed}
               >
                 <Image
                   src="/images/login_naver.png"
@@ -278,9 +401,14 @@ export default function LoginClient() {
 
               <button
                 type="button"
-                className="w-full h-14 rounded-xl transition-all cursor-pointer active:scale-[0.98] hover:opacity-90"
+                className={`w-full h-14 rounded-xl transition-all active:scale-[0.98] ${
+                  isAllAgreed
+                    ? 'cursor-pointer hover:opacity-90'
+                    : 'cursor-not-allowed opacity-50'
+                }`}
                 aria-label="카카오톡으로 로그인"
                 onClick={handleKakaoLogin}
+                disabled={!isAllAgreed}
               >
                 <Image
                   src="/images/login_kakao.png"

@@ -26,6 +26,7 @@ export default async function PricingPage() {
   // 현재 구독 중인 플랜 코드 확인
   const currentPlanCode = subscription?.subscriptionPlan?.plan || 'free';
   const isActive = subscription?.subscription?.active || false;
+  const isPaidSubscription = isAuthenticated && isActive && currentPlanCode !== 'free';
 
   return (
     <div className="min-h-screen bg-white">
@@ -59,7 +60,13 @@ export default async function PricingPage() {
             eventBenefit={basicPlanEventBenefit}
             isAuthenticated={isAuthenticated}
             isCurrentPlan={isAuthenticated && currentPlanCode === 'basic' && isActive}
-            buttonText={isAuthenticated && currentPlanCode === 'basic' && isActive ? '현재 플랜' : '구독하기'}
+            buttonText={
+              isAuthenticated && currentPlanCode === 'basic' && isActive 
+                ? '현재 플랜' 
+                : isPaidSubscription 
+                  ? '플랜 변경' 
+                  : '구독하기'
+            }
           />
 
           {/* Pro 플랜 카드 */}
@@ -76,7 +83,13 @@ export default async function PricingPage() {
             isPopular={true}
             isAuthenticated={isAuthenticated}
             isCurrentPlan={isAuthenticated && currentPlanCode === 'pro' && isActive}
-            buttonText={isAuthenticated && currentPlanCode === 'pro' && isActive ? '현재 플랜' : '구독하기'}
+            buttonText={
+              isAuthenticated && currentPlanCode === 'pro' && isActive 
+                ? '현재 플랜' 
+                : isPaidSubscription 
+                  ? '플랜 변경' 
+                  : '구독하기'
+            }
           />
 
           {/* Master 플랜 카드 */}
@@ -92,7 +105,13 @@ export default async function PricingPage() {
             features={masterPlanFeatures}
             isAuthenticated={isAuthenticated}
             isCurrentPlan={isAuthenticated && currentPlanCode === 'master' && isActive}
-            buttonText={isAuthenticated && currentPlanCode === 'master' && isActive ? '현재 플랜' : '구독하기'}
+            buttonText={
+              isAuthenticated && currentPlanCode === 'master' && isActive 
+                ? '현재 플랜' 
+                : isPaidSubscription 
+                  ? '플랜 변경' 
+                  : '구독하기'
+            }
           />
         </div>
       </div>

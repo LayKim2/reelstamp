@@ -182,6 +182,17 @@ export default function Header() {
 
           {/* 우측: 가입/로그인 버튼 및 모바일 메뉴 */}
           <div className="flex items-center gap-3">
+            {/* 영상 횟수 UI (모바일) */}
+            <div className="md:hidden flex items-center gap-3 px-3 py-1.5 bg-white border border-gray-200 rounded-lg">
+              {/* 재생 버튼 아이콘 */}
+              <div className="w-5 h-5 bg-[#FF496D] rounded flex items-center justify-center flex-shrink-0">
+                <svg width="8" height="8" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg" className="ml-0.5">
+                  <path d="M2 1L6 4L2 7V1Z" fill="white" />
+                </svg>
+              </div>
+              {/* 숫자 */}
+              <span className="text-base font-medium text-[#FF496D]">7</span>
+            </div>
             {/* 모바일 햄버거 메뉴 버튼 */}
             <button
               type="button"
@@ -211,7 +222,18 @@ export default function Header() {
               </div>
             </button>
             {/* 로그인/회원가입 또는 프로필 이미지 (PC만 표시) */}
-            <div className="hidden md:flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-6">
+              {/* 영상 횟수 UI (PC) */}
+              <div className="flex items-center gap-4 px-4 py-2 bg-white border border-gray-200 rounded-lg min-w-[80px]">
+                {/* 재생 버튼 아이콘 */}
+                <div className="w-5 h-5 bg-[#FF496D] rounded flex items-center justify-center flex-shrink-0">
+                  <svg width="8" height="8" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg" className="ml-0.5">
+                    <path d="M2 1L6 4L2 7V1Z" fill="white" />
+                  </svg>
+                </div>
+                {/* 숫자 */}
+                <span className="text-base font-medium text-[#FF496D]">7</span>
+              </div>
               {isAuthenticated ? (
                 // 로그인 상태: 프로필 이미지 (클릭 시 메뉴 표시)
                 <div className="relative" ref={profileMenuRef}>
@@ -311,34 +333,20 @@ export default function Header() {
                   </AnimatePresence>
                 </div>
               ) : (
-                // 비로그인 상태: 가입, 로그인 버튼
-                <>
-                  <Link
-                    href="/login"
-                    onClick={() => {
-                      if (typeof window !== 'undefined') {
-                        sessionStorage.setItem('previousPath', pathname);
-                      }
-                    }}
-                    className="px-5 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all flex items-center justify-center"
-                    aria-label="회원가입"
-                  >
-                    가입
-                  </Link>
-                  <Link
-                    href="/login"
-                    onClick={() => {
-                      if (typeof window !== 'undefined') {
-                        sessionStorage.setItem('previousPath', pathname);
-                      }
-                    }}
-                    className="px-5 py-2 text-base font-medium text-white rounded-xl transition-all hover:bg-[#1F2128] hover:shadow-lg flex items-center justify-center"
-                    style={{ backgroundColor: '#2B2D37' }}
-                    aria-label="로그인"
-                  >
-                    로그인
-                  </Link>
-                </>
+                // 비로그인 상태: 로그인/회원가입 버튼
+                <Link
+                  href="/login"
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      sessionStorage.setItem('previousPath', pathname);
+                    }
+                  }}
+                  className="px-5 py-2 text-base font-medium text-white rounded-xl transition-all hover:bg-[#1F2128] hover:shadow-lg flex items-center justify-center"
+                  style={{ backgroundColor: '#2B2D37' }}
+                  aria-label="로그인/회원가입"
+                >
+                  로그인/회원가입
+                </Link>
               )}
             </div>
           </div>
@@ -435,37 +443,22 @@ export default function Header() {
                       {isLoggingOut ? '로그아웃 중...' : '로그아웃'}
                     </button>
                   ) : (
-                    // 비로그인 상태: 가입, 로그인 버튼
-                    <>
-                      <Link
-                        href="/login"
-                        onClick={() => {
-                          setIsMobileMenuOpen(false);
-                          if (typeof window !== 'undefined') {
-                            sessionStorage.setItem('previousPath', pathname);
-                          }
-                        }}
-                        className="w-full px-5 py-2 text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all border border-gray-300 text-center"
-                        aria-label="회원가입"
-                      >
-                        가입
-                      </Link>
-                      <Link
-                        href="/login"
-                        onClick={() => {
-                          setIsMobileMenuOpen(false);
-                          if (typeof window !== 'undefined') {
-                            sessionStorage.setItem('previousPath', pathname);
-                          }
-                        }}
-                        className="w-full px-5 py-2 text-base font-medium text-white rounded-xl transition-all hover:bg-[#1F2128] hover:shadow-lg text-center"
-                        style={{ backgroundColor: '#2B2D37' }}
-                        aria-label="로그인"
-                      >
-                        로그인
-                      </Link>
-                    </>
-                      )}
+                    // 비로그인 상태: 로그인/회원가입 버튼
+                    <Link
+                      href="/login"
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        if (typeof window !== 'undefined') {
+                          sessionStorage.setItem('previousPath', pathname);
+                        }
+                      }}
+                      className="w-full px-5 py-2 text-base font-medium text-white rounded-xl transition-all hover:bg-[#1F2128] hover:shadow-lg text-center"
+                      style={{ backgroundColor: '#2B2D37' }}
+                      aria-label="로그인/회원가입"
+                    >
+                      로그인/회원가입
+                    </Link>
+                  )}
                     </div>
                   </div>
                 </nav>

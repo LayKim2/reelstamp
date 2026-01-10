@@ -5,6 +5,7 @@ export const API_CONFIG = {
   // Web API 서버 - 8082 포트
   WEB_BASE_URL: process.env.NEXT_PUBLIC_WEB_API_BASE_URL || 'http://140.245.70.80:8082',
   // 공통 설정
-  TIMEOUT: parseInt(process.env.API_TIMEOUT || '10000', 10),
+  // Gemini API는 시간이 오래 걸릴 수 있으므로 타임아웃을 크게 설정 (Vercel Hobby는 10초 제한이 있음)
+  TIMEOUT: parseInt(process.env.API_TIMEOUT || '300000', 10), // 5분 (300초)
 } as const;
 

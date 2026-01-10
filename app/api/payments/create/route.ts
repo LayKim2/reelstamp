@@ -71,9 +71,10 @@ export async function POST(request: NextRequest) {
       // 3. 상품명에 핵심 정보(매월 결제, 취소 가능)를 명시
       goodname: `릴스탬프 ${planName} (매월 ₩${price.toLocaleString()} / 언제든 취소 가능)`,
       goodprice: price,
-      // TODO: 실제 고객 휴대폰 번호 사용
-      // - 현재는 테스트용 기본 번호 사용 중
-      recvphone: '01059601017', // TO DO 
+      // recvphone: 구매자 휴대폰번호 (필수, 더미 값 전송, 결제창에서 구매자가 수정 가능)
+      recvphone: '01000000000',
+      // recvemail: 구매자 이메일 (로그인 시 받은 userInfo.email)
+      recvemail: user.email,
       rebillCycleType: 'Month',
       rebillCycleMonth: String(dayOfMonth),
       rebillExpire: rebillExpire, // 1년 뒤 날짜 명시
@@ -85,10 +86,9 @@ export async function POST(request: NextRequest) {
 
     console.log('[PayApp Recurring Link Response]', {
       state: payappResponse.state,
-      
       billingKey: payappResponse.billingKey,
       payurl: payappResponse.payurl,
-      errorMessage: payappResponse.errorMessage
+      errorMessage: payappResponse.errorMessage,
     });
 
     if (payappResponse.state === '1' && payappResponse.payurl) {
@@ -113,6 +113,21 @@ export async function POST(request: NextRequest) {
           }),
         });
 
+        if (!billingResponse.ok) {
+          const errorText = await billingResponse.text();
+          console.error('[Billing Start Failed]', {
+            status: billingResponse.status,
+            body: errorText.substring(0, 500),
+          });
+          return NextResponse.json(
+            {
+              success: false,
+              message: '결제 처리 중 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+            },
+            { status: 500 }
+          );
+        }
+
         const billingResult = await billingResponse.json();
 
         if (!billingResult.success) {
@@ -120,19 +135,18 @@ export async function POST(request: NextRequest) {
           return NextResponse.json(
             {
               success: false,
-              message: billingResult.message || '빌링 정보 저장 중 오류가 발생했습니다.',
+              message: billingResult.message || '결제 처리 중 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
             },
             { status: 500 }
           );
         }
 
-        console.log('[Billing Start Success]', billingResult);
-      } catch (billingError) {
-        console.error('[Billing Start API Error]', billingError);
+      } catch (billingError: any) {
+        console.error('[Billing Start API Error]', billingError.message);
         return NextResponse.json(
           {
             success: false,
-            message: '빌링 정보 저장 중 오류가 발생했습니다.',
+            message: '결제 처리 중 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
           },
           { status: 500 }
         );

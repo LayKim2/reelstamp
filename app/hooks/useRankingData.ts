@@ -47,13 +47,14 @@ function transformReelsExportToRankingItem(
 // 카테고리별 랭킹 데이터를 가져오는 함수
 async function fetchRankingData(category: Category): Promise<RankingItem[]> {
   // Supabase에서 카테고리별 데이터 조회 (views 내림차순, updated_at 내림차순)
+  // 같은 account에 대해 최대 2개만 선택하기 위해 충분한 데이터를 가져옴 (40개)
   const { data, error } = await supabase
     .from('reels_exports')
     .select('*')
     .eq('category', category)
     .order('views', { ascending: false })
     .order('updated_at', { ascending: false })
-    .limit(8); // 상위 8개 가져오기
+    .limit(40); // 충분한 데이터를 가져와서 필터링
 
   if (error) {
     console.error('랭킹 데이터 조회 오류:', {
@@ -72,8 +73,28 @@ async function fetchRankingData(category: Category): Promise<RankingItem[]> {
     return [];
   }
 
+  // 같은 account에 대해 최대 2개까지만 선택하는 필터링 로직
+  const accountCountMap = new Map<string, number>();
+  const filteredData: ReelsExport[] = [];
+
+  for (const item of data as ReelsExport[]) {
+    const account = item.account;
+    const count = accountCountMap.get(account) || 0;
+    
+    // 같은 account가 2개 미만이면 추가
+    if (count < 2) {
+      filteredData.push(item);
+      accountCountMap.set(account, count + 1);
+      
+      // 8개를 채우면 중단
+      if (filteredData.length >= 8) {
+        break;
+      }
+    }
+  }
+
   // ReelsExport 타입으로 변환 후 RankingItem으로 변환
-  return transformReelsExportToRankingItem(data as ReelsExport[], category);
+  return transformReelsExportToRankingItem(filteredData, category);
 }
 
 // 랭킹 데이터 페칭 훅
