@@ -26,12 +26,9 @@ export async function POST(request: NextRequest) {
     const { tokenInfo, userInfo } = response.data.data;
     const cookieStore = await cookies();
 
-    // HTTPS인 경우에만 secure: true 설정 (HTTP에서도 작동하도록)
-    const isSecure = process.env.NEXT_PUBLIC_BASE_URL?.startsWith('https://') ?? false;
-
     cookieStore.set('accessToken', tokenInfo.accessToken, {
       httpOnly: true,
-      secure: isSecure,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: tokenInfo.expiresIn,
       path: '/',
@@ -39,7 +36,7 @@ export async function POST(request: NextRequest) {
 
     cookieStore.set('refreshToken', tokenInfo.refreshToken, {
       httpOnly: true,
-      secure: isSecure,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7,
       path: '/',
@@ -65,4 +62,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

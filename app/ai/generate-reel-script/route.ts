@@ -47,14 +47,21 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 외부 서버에서 보낸 에러 메시지나 Validation Error(422)를 그대로 전달
-    // 500 에러의 경우 사용자 친화적인 메시지 제공
-    const errorMessage = statusCode === 500 
-      ? { message: '서버에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.' }
-      : errorData || { message: '대본 생성 중 서버 오류가 발생했습니다.' };
+    // 외부 서버에서 보낸 에러 메시지를 그대로 전달
+    // 403 에러의 경우 detail.message를 추출
+    if (statusCode === 403 && errorData && typeof errorData === 'object' && 'detail' in errorData) {
+      const detail = (errorData as any).detail;
+      if (detail && typeof detail === 'object' && 'message' in detail) {
+        return NextResponse.json(
+          { message: detail.message },
+          { status: statusCode }
+        );
+      }
+    }
 
+    // 다른 에러의 경우 errorData를 그대로 전달 (에러 메시지가 있으면 포함)
     return NextResponse.json(
-      errorMessage,
+      errorData || { message: axiosError.message || '대본 생성 중 서버 오류가 발생했습니다.' },
       { status: statusCode }
     );
   }
