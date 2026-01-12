@@ -15,10 +15,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 외부 AI API 서버로 요청 전달 (GET /ai/latest-reel-script)
+    // 외부 AI API 서버로 요청 전달 (GET /ai/reels-creation/latest-script)
     // getServerAiApiClient()를 사용하여 쿠키의 accessToken을 헤더에 포함
     const aiApiClient = await getServerAiApiClient();
-    const response = await aiApiClient.get('/ai/latest-reel-script', {
+    const response = await aiApiClient.get('/ai/reels-creation/latest-script', {
       params: { sessionId }
     });
 

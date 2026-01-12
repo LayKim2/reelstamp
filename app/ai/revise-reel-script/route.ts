@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     // 3. 외부 AI API 서버로 챗봇 대화 요청 전달 (Axios 사용)
     // getServerAiApiClient()를 사용하여 쿠키의 accessToken을 헤더에 포함
     const aiApiClient = await getServerAiApiClient();
-    const response = await aiApiClient.post('/ai/revise-reel-script', {
+    const response = await aiApiClient.post('/ai/reels-creation/revise-script', {
       sessionId,
       editRequest,
     });

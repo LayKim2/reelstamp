@@ -43,7 +43,7 @@ export const createReelScriptFormData = (request: ReelScriptRequest): FormData =
 export const generateReelScript = async (request: ReelScriptRequest): Promise<ReelScriptResponse> => {
   const formData = createReelScriptFormData(request);
   // Next.js 프록시 라우트로 요청 (CORS 문제 해결)
-  const response = await fetch('/api/reels-creation/generate-script', {
+  const response = await fetch('/ai/generate-reel-script', {
     method: 'POST',
     body: formData, // FormData는 Content-Type을 자동으로 설정하므로 헤더에 명시하지 않음
   });
@@ -83,7 +83,7 @@ export const generateReelScript = async (request: ReelScriptRequest): Promise<Re
  */
 export const chatReelScript = async (request: ChatReelScriptRequest): Promise<ChatReelScriptResponse> => {
   // Next.js 프록시 라우트로 요청 (CORS 문제 해결)
-  const response = await fetch('/api/reels-creation/revise-script', {
+  const response = await fetch('/ai/revise-reel-script', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -125,7 +125,7 @@ export const chatReelScript = async (request: ChatReelScriptRequest): Promise<Ch
  */
 export const getLatestReelScript = async (sessionId: string): Promise<ReelScriptResponse> => {
   // Next.js 프록시 라우트로 요청
-  const response = await fetch(`/api/reels-creation/latest-script?sessionId=${sessionId}`, {
+  const response = await fetch(`/ai/latest-reel-script?sessionId=${sessionId}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -152,7 +152,7 @@ export const getLatestReelScript = async (sessionId: string): Promise<ReelScript
  * @param request 수정 적용 요청 데이터
  */
 export const applyReelScript = async (request: ApplyReelScriptRequest): Promise<ChatReelScriptResponse> => {
-  const response = await fetch('/api/reels-creation/revise-script-full', {
+  const response = await fetch('/ai/revise-reel-script-full', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
