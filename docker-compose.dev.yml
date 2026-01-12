@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: reelstamp-web-dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NODE_ENV=development
+    env_file:
+      - .env.local
+    command: npm run dev
+    restart: unless-stopped
+    networks:
+      - reelstamp-network
+
+networks:
+  reelstamp-network:
+    driver: bridge

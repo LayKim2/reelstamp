@@ -2,6 +2,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Docker를 위한 standalone 빌드 출력
+  output: 'standalone',
   // 이미지 최적화 설정
   images: {
     // 이미지 최적화 활성화

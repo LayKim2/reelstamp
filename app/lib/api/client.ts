@@ -17,12 +17,15 @@ export const setupInterceptors = (client: AxiosInstance, clientName: string) => 
       }
       
       const timestamp = new Date().toISOString();
+      const fullUrl = config.baseURL ? `${config.baseURL}${config.url}` : config.url;
       console.log(`[${clientName} Request] ${timestamp}`, {
         method: config.method?.toUpperCase(),
         url: config.url,
         baseURL: config.baseURL,
+        fullUrl: fullUrl,
         headers: config.headers,
         hasFormData: config.data instanceof FormData,
+        payload: config.data && !(config.data instanceof FormData) ? config.data : undefined,
       });
       return config;
     },
@@ -36,10 +39,13 @@ export const setupInterceptors = (client: AxiosInstance, clientName: string) => 
   client.interceptors.response.use(
     (response: AxiosResponse) => {
       const timestamp = new Date().toISOString();
+      const fullUrl = response.config.baseURL ? `${response.config.baseURL}${response.config.url}` : response.config.url;
       console.log(`[${clientName} Response] ${timestamp}`, {
         status: response.status,
         statusText: response.statusText,
         url: response.config.url,
+        baseURL: response.config.baseURL,
+        fullUrl: fullUrl,
         data: response.data,
         dataStringified: JSON.stringify(response.data, null, 2),
       });
@@ -47,12 +53,16 @@ export const setupInterceptors = (client: AxiosInstance, clientName: string) => 
     },
     (error) => {
       const timestamp = new Date().toISOString();
+      const fullUrl = error.config?.baseURL ? `${error.config.baseURL}${error.config.url}` : error.config?.url;
       console.error(`[${clientName} Response Error] ${timestamp}`, {
         message: error.message,
         status: error.response?.status,
         statusText: error.response?.statusText,
         url: error.config?.url,
+        baseURL: error.config?.baseURL,
+        fullUrl: fullUrl,
         data: error.response?.data,
+        code: error.code,
       });
       return Promise.reject(error);
     }

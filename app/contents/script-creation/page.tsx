@@ -387,9 +387,22 @@ export default function ScriptCreationPage() {
         onError: (error: any) => {
           setIsSubmitting(false);
           const statusCode = error?.response?.status;
-          const errorMsg = statusCode === 422 
-            ? '입력 정보가 올바르지 않습니다. 다시 확인해주세요.' 
-            : error?.message || '대본 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+          const errorData = error?.response?.data;
+          const errorCode = errorData?.detail?.code;
+          
+          let errorMsg = '대본 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+          
+          // SESSION_LIMIT_EXCEEDED 에러 처리
+          if (errorCode === 'SESSION_LIMIT_EXCEEDED') {
+            errorMsg = '대본 생성 횟수를 모두 사용하셨습니다. 플랜을 업그레이드하거나 다음 달에 다시 시도해주세요.';
+          } else if (statusCode === 403) {
+            errorMsg = '대본 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+          } else if (statusCode === 422) {
+            errorMsg = '입력 정보가 올바르지 않습니다. 다시 확인해주세요.';
+          } else if (error?.message) {
+            errorMsg = error.message;
+          }
+          
           setSubmitError(errorMsg);
         }
       });

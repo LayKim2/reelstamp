@@ -328,19 +328,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                           ) : (
                             <p className="text-gray-600 mb-6">{planName}을(를) 사용 중입니다.</p>
                           )}
-                          <div className="bg-gradient-to-r from-[#EB48B1]/10 to-[#F59A39]/10 rounded-xl p-4 sm:p-6 mb-4 sm:mb-6">
-                            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
-                              {isCanceled ? '남은 기간 동안 혜택을 마음껏 누리세요!' : `Reelstamp ${planInfo?.name} 혜택을 즐겨보세요!`}
-                            </h3>
-                            <ul className="space-y-2 sm:space-y-3">
-                              {planBenefits.map((benefit, index) => (
-                                <li key={index} className="flex items-start gap-3">
-                                  <benefit.icon className="w-4 h-4 sm:w-5 sm:h-5 text-[#EB48B1] flex-shrink-0 mt-0.5" />
-                                  <span className="text-sm sm:text-base text-gray-700">{benefit.text}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
+                         
                         </>
                       )}
                     </div>

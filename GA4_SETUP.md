@@ -13,7 +13,7 @@
 `.env.local` 파일에 다음 환경 변수를 추가하세요:
 
 ```env
-NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX
+NEXT_PUBLIC_GA_MEASUREMENT_ID=G-W21P1HCGCK
 ```
 
 **참고**: 

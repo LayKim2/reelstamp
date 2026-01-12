@@ -30,9 +30,23 @@ export async function loginWithSocialAction(
     const { tokenInfo, userInfo } = response.data.data;
     const cookieStore = await cookies();
     
+    // HTTPS인 경우에만 secure: true 설정 (HTTP에서도 작동하도록)
+    // 런타임에 확인하도록 수정 (빌드 타임이 아닌)
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+    const isSecure = baseUrl.startsWith('https://');
+    
+    console.log('[loginWithSocialAction] 쿠키 설정 시작', {
+      hasTokenInfo: !!tokenInfo,
+      hasAccessToken: !!tokenInfo.accessToken,
+      hasRefreshToken: !!tokenInfo.refreshToken,
+      baseUrl: baseUrl,
+      isSecure: isSecure,
+      expiresIn: tokenInfo.expiresIn
+    });
+    
     cookieStore.set('accessToken', tokenInfo.accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isSecure,
       sameSite: 'lax',
       maxAge: tokenInfo.expiresIn,
       path: '/',
@@ -40,10 +54,22 @@ export async function loginWithSocialAction(
 
     cookieStore.set('refreshToken', tokenInfo.refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isSecure,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7,
       path: '/',
+    });
+    
+    // 쿠키 저장 후 즉시 확인
+    const savedAccessToken = cookieStore.get('accessToken')?.value;
+    const savedRefreshToken = cookieStore.get('refreshToken')?.value;
+    
+    console.log('[loginWithSocialAction] 쿠키 저장 완료', {
+      hasSavedAccessToken: !!savedAccessToken,
+      hasSavedRefreshToken: !!savedRefreshToken,
+      savedAccessTokenLength: savedAccessToken?.length,
+      savedRefreshTokenLength: savedRefreshToken?.length,
+      allCookies: cookieStore.getAll().map(c => c.name)
     });
 
     return {
