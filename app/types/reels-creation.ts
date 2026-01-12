@@ -9,7 +9,7 @@ export interface ReelScriptRequest {
   user_id: number; 
   reel_length?: number | null;
   extra_request?: string | null;
-  video?: File[] | null;
+  video_urls?: string[] | null; // Vercel Blob URL
   video_source_mode?: 'uploaded_only' | 'uploaded_plus_new' | 'no_video';
 }
 

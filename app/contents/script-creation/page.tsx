@@ -12,6 +12,7 @@ import { useGenerateScript } from '@/app/hooks/useGenerateScript';
 import { REEL_CATEGORY_MAP, REEL_LENGTH_MAP, REEL_CATEGORY_OPTIONS, REEL_LENGTH_OPTIONS } from '@/app/lib/constants/reels-creation';
 import { ReelScriptRequest } from '@/app/types/reels-creation';
 import { useAuth } from '@/app/components/providers/AuthProvider';
+import { uploadVideosToBlob } from '@/app/lib/api/reels-creation';
 
 // 상수
 const MAX_DURATION_SECONDS = 25 * 60; // 1500초
@@ -25,7 +26,7 @@ const LoadingOverlay = dynamic(() => import('@/app/components/ui/LoadingOverlay'
 export default function ScriptCreationPage() {
   const router = useRouter();
   const pathname = usePathname();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, subscription, refreshSubscription } = useAuth();
   const { mutate: generateScript, data: generatedData, reset: resetApi } = useGenerateScript();
 
   // 폼 상태 관리
@@ -333,6 +334,33 @@ export default function ScriptCreationPage() {
       return;
     }
 
+    // 세션 사용량 체크
+    if (subscription) {
+      const hasVideo = videoFiles.length > 0;
+      const textRemaining = subscription.textSessionUsage?.remaining ?? 0;
+      const videoRemaining = subscription.videoSessionUsage?.remaining ?? 0;
+      const textUnlimited = subscription.textSessionUsage?.unlimited ?? false;
+      const videoUnlimited = subscription.videoSessionUsage?.unlimited ?? false;
+
+      if (hasVideo) {
+        // 영상이 있는 경우: textSessionUsage와 videoSessionUsage 둘 다 체크
+        if (!textUnlimited && textRemaining < 1) {
+          setSubmitError('텍스트 대본 생성 횟수가 부족합니다. 플랜을 업그레이드하거나 다음 달에 다시 시도해주세요.');
+          return;
+        }
+        if (!videoUnlimited && videoRemaining < 1) {
+          setSubmitError('영상 대본 생성 횟수가 부족합니다. 플랜을 업그레이드하거나 다음 달에 다시 시도해주세요.');
+          return;
+        }
+      } else {
+        // 영상이 없는 경우: textSessionUsage만 체크
+        if (!textUnlimited && textRemaining < 1) {
+          setSubmitError('텍스트 대본 생성 횟수가 부족합니다. 플랜을 업그레이드하거나 다음 달에 다시 시도해주세요.');
+          return;
+        }
+      }
+    }
+
     // 영상 파일 제한 체크
     if (videoFiles.length > 0) {
       const { duration: totalDuration, size: totalSize } = totalVideoStats;
@@ -362,6 +390,15 @@ export default function ScriptCreationPage() {
         videoSourceMode = excludeRecommendedSources ? 'uploaded_only' : 'uploaded_plus_new';
       }
 
+      // 영상 파일이 있으면 먼저 Vercel Blob에 업로드
+      let videoUrls: string[] | null = null;
+      if (videoFiles.length > 0) {
+        setLoadingText('영상 업로드 중...');
+        videoUrls = await uploadVideosToBlob(videoFiles.map(({ file }) => file));
+      }
+      
+      setLoadingText('대본 생성 중...');
+
       // API 요청 데이터 생성 (타입 안정성 확보)
       const request: ReelScriptRequest = {
         reel_type: REEL_CATEGORY_MAP[category] || 'information',
@@ -370,16 +407,19 @@ export default function ScriptCreationPage() {
         user_id: user.id,
         reel_length: videoLength ? REEL_LENGTH_MAP[videoLength] : null,
         extra_request: additionalContent || null,
-        video: videoFiles.length > 0 ? videoFiles.map(({ file }) => file) : null,
+        video_urls: videoUrls,
         video_source_mode: videoSourceMode,
       };
-
-      setLoadingText('대본 생성 중...');
       
       // useMutation 호출
       generateScript(request, {
-        onSuccess: (data) => {
+        onSuccess: async (data) => {
           setIsSubmitting(false);
+          
+          // 영상이 있는 경우 구독 정보 새로고침 (영상 횟수 업데이트)
+          if (videoFiles.length > 0) {
+            await refreshSubscription();
+          }
           
           // sessionId를 쿼리 파라미터로 전달하여 이동
           router.push(`/contents/script-creation/result?sessionId=${data.sessionId}`);
@@ -392,7 +432,15 @@ export default function ScriptCreationPage() {
           // 서버에서 보낸 에러 메시지를 그대로 표시
           let errorMsg = '대본 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
           
-          if (errorData?.message) {
+          // detail.message 형식 체크 (403, 500 등 모든 에러에 대해)
+          if (errorData && typeof errorData === 'object' && 'detail' in errorData) {
+            const detail = (errorData as any).detail;
+            if (detail && typeof detail === 'object' && 'message' in detail) {
+              errorMsg = detail.message;
+            } else if (errorData?.message) {
+              errorMsg = errorData.message;
+            }
+          } else if (errorData?.message) {
             // 서버에서 보낸 메시지가 있으면 그대로 사용
             errorMsg = errorData.message;
           } else if (error?.message) {
@@ -411,6 +459,8 @@ export default function ScriptCreationPage() {
   }, [
     isAuthenticated,
     user,
+    subscription,
+    refreshSubscription,
     pathname,
     router,
     category,

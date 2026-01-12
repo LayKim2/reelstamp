@@ -8,9 +8,9 @@ export async function POST(request: NextRequest) {
     // 1. 클라이언트로부터 전송된 FormData 파싱
     const formData = await request.formData();
     
-    
     // 2. 외부 AI API 서버로 요청 전달 (Axios 사용)
     // getServerAiApiClient()를 사용하여 쿠키의 accessToken을 헤더에 포함
+    // FormData에 video_urls가 포함되어 있으면 그대로 전달됨
     const aiApiClient = await getServerAiApiClient();
     const response = await aiApiClient.post('/ai/generate-reel-script', formData);
 
@@ -48,8 +48,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 외부 서버에서 보낸 에러 메시지를 그대로 전달
-    // 403 에러의 경우 detail.message를 추출
-    if (statusCode === 403 && errorData && typeof errorData === 'object' && 'detail' in errorData) {
+    // 403, 500 등 에러의 경우 detail.message를 추출 (일관된 형식)
+    if (errorData && typeof errorData === 'object' && 'detail' in errorData) {
       const detail = (errorData as any).detail;
       if (detail && typeof detail === 'object' && 'message' in detail) {
         return NextResponse.json(
@@ -59,9 +59,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 다른 에러의 경우 errorData를 그대로 전달 (에러 메시지가 있으면 포함)
+    // detail.message가 없는 경우 errorData.message 또는 기본 메시지 사용
+    if (errorData && typeof errorData === 'object' && 'message' in errorData) {
+      return NextResponse.json(
+        { message: errorData.message },
+        { status: statusCode }
+      );
+    }
+
+    // errorData가 없거나 형식이 다른 경우 기본 메시지
     return NextResponse.json(
-      errorData || { message: axiosError.message || '대본 생성 중 서버 오류가 발생했습니다.' },
+      { message: axiosError.message || '대본 생성 중 서버 오류가 발생했습니다.' },
       { status: statusCode }
     );
   }

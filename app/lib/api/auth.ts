@@ -54,7 +54,8 @@ export interface SubscriptionStatusResponse {
     description: string;
     textEnabled: boolean;
     videoEnabled: boolean;
-    sessionLimit: number;
+    textSessionLimit: number;
+    videoSessionLimit: number;
     revisionLimit: number;
     price: {
       fakePrice: number;
@@ -62,7 +63,13 @@ export interface SubscriptionStatusResponse {
       openPrice: number;
     };
   };
-  sessionUsage: {
+  videoSessionUsage: {
+    limit: number;
+    used: number;
+    remaining: number;
+    unlimited: boolean;
+  };
+  textSessionUsage: {
     limit: number;
     used: number;
     remaining: number;

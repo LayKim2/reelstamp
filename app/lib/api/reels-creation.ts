@@ -26,14 +26,46 @@ export const createReelScriptFormData = (request: ReelScriptRequest): FormData =
     formData.append('video_source_mode', request.video_source_mode);
   }
   
-  // 모든 비디오 파일 전송 (배열로 전송)
-  if (request.video && request.video.length > 0) {
-    request.video.forEach((file) => {
-      formData.append('video', file);
+  // Vercel Blob URL 전송
+  if (request.video_urls && request.video_urls.length > 0) {
+    // Vercel Blob URL을 각각 개별적으로 전송
+    request.video_urls.forEach((url) => {
+      formData.append('video_urls', url);
     });
   }
   
   return formData;
+};
+
+/**
+ * 영상 파일을 Vercel Blob에 업로드
+ * @param files 업로드할 영상 파일 배열
+ * @returns 업로드된 URL 배열
+ */
+export const uploadVideosToBlob = async (files: File[]): Promise<string[]> => {
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append('video', file);
+  });
+
+  const response = await fetch('/api/upload-video', {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw {
+      response: {
+        status: response.status,
+        data: errorData,
+      },
+      message: errorData.error || '영상 업로드 중 오류가 발생했습니다.',
+    };
+  }
+
+  const data = await response.json();
+  return data.urls;
 };
 
 /**

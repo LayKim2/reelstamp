@@ -3,6 +3,18 @@ import { API_CONFIG } from '@/app/lib/constants/api';
 import axios from 'axios';
 import { cancelPayAppRecurring } from '@/app/lib/api/payapp';
 
+// PayApp 빌링 상태 상수
+const BILLING_STATUS = {
+  PAID: 'paid',
+  CANCELED: 'canceled',
+} as const;
+
+// 구독 상태 상수
+const SUBSCRIPTION_STATUS = {
+  ACTIVE: 'ACTIVE',
+  CANCELED: 'CANCELED',
+} as const;
+
 /**
  * PayApp 결제 결과 통보 (Webhook) 처리 API
  * 경로: /api/payment (사용자가 페이앱 관리자 페이지에 등록한 URL)
@@ -62,7 +74,7 @@ export async function POST(request: NextRequest) {
       // PayApp 상태 코드를 내부 상태로 변환
       // 4: 결제완료 -> paid
       // 9, 64: 결제취소/환불 -> canceled
-      const status = state === '4' ? 'paid' : 'canceled';
+      const status = state === '4' ? BILLING_STATUS.PAID : BILLING_STATUS.CANCELED;
 
       // 빌링 상태 저장 API 호출 (내부 DB에 저장)
       // 내부 백엔드 API 서버로 직접 전송 (X-Internal-Secret 헤더 포함)
@@ -103,9 +115,52 @@ export async function POST(request: NextRequest) {
           }
         );
 
+        // 구독 상태 업데이트 API 호출
+        try {
+          const subscriptionStatus = status === BILLING_STATUS.PAID ? SUBSCRIPTION_STATUS.ACTIVE : SUBSCRIPTION_STATUS.CANCELED;
+          
+          const subscriptionRequestBody: any = {
+            userId: Number(userId),
+            status: subscriptionStatus,
+          };
+          
+          // ACTIVE일 때만 planCode 포함, CANCELED일 때는 빈값
+          if (subscriptionStatus === SUBSCRIPTION_STATUS.ACTIVE) {
+            const planCode = response.data?.data?.planCode || 'basic'; // 내부 API 응답에서 planCode 가져오기, 없으면 기본값
+            subscriptionRequestBody.planCode = planCode;
+          } else {
+            // CANCELED일 때는 planCode를 빈값으로 설정 (또는 포함하지 않음)
+            subscriptionRequestBody.planCode = '';
+          }
+
+          await axios.post(
+            `${API_CONFIG.WEB_BASE_URL}/api/subscription/status`,
+            subscriptionRequestBody,
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Internal-Secret': internalSecret,
+              },
+              timeout: API_CONFIG.TIMEOUT,
+            }
+          );
+          
+          console.log('[PayApp Webhook] 구독 상태 업데이트 성공:', {
+            status: subscriptionStatus,
+            planCode: subscriptionRequestBody.planCode || undefined,
+          });
+        } catch (subscriptionError: any) {
+          console.error('[PayApp Webhook] 구독 상태 업데이트 실패:', {
+            message: subscriptionError.message,
+            status: subscriptionError.response?.status,
+            data: subscriptionError.response?.data,
+          });
+          // 구독 상태 업데이트 실패해도 웹훅은 성공으로 응답 (나중에 수동 처리 가능)
+        }
+
         // 새로운 결제가 성공적으로 저장된 후, 기존 활성 구독이 있으면 자동 해지
         // 내부 API 응답에서 기존 구독 정보를 받아서 처리
-        if (status === 'paid' && response.data?.data) {
+        if (status === BILLING_STATUS.PAID && response.data?.data) {
           const billingData = response.data.data;
           const previousBillingKey = billingData.previousBillingKey; // 내부 API에서 기존 구독 정보 반환 가정
           const previousOrderId = billingData.previousOrderId; // 기존 구독의 orderId
@@ -134,7 +189,7 @@ export async function POST(request: NextRequest) {
                         {
                           userId: Number(userId),
                           orderId: String(previousOrderId),
-                          status: 'canceled',
+                          status: BILLING_STATUS.CANCELED,
                           paymentNo: String(mul_no), // 현재 결제 번호 사용 (또는 기존 결제 번호)
                           price: 0, // 해지는 금액 없음
                           cardName: null,
@@ -150,6 +205,30 @@ export async function POST(request: NextRequest) {
                         }
                       );
                       console.log('[PayApp Webhook] 기존 구독 canceled 상태 업데이트 성공');
+
+                      // 기존 구독 취소 시 구독 상태도 업데이트
+                      try {
+                        await axios.post(
+                          `${API_CONFIG.WEB_BASE_URL}/api/subscription/status`,
+                          {
+                            userId: Number(userId),
+                            status: SUBSCRIPTION_STATUS.CANCELED,
+                          },
+                          {
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'X-Internal-Secret': internalSecret,
+                            },
+                            timeout: API_CONFIG.TIMEOUT,
+                          }
+                        );
+                        console.log('[PayApp Webhook] 기존 구독 CANCELED 상태 업데이트 성공');
+                      } catch (subscriptionCancelError: any) {
+                        console.error('[PayApp Webhook] 기존 구독 CANCELED 상태 업데이트 실패:', {
+                          message: subscriptionCancelError.message,
+                          status: subscriptionCancelError.response?.status,
+                        });
+                      }
                     } catch (updateError: any) {
                       console.error('[PayApp Webhook] 기존 구독 canceled 상태 업데이트 실패:', {
                         message: updateError.message,
