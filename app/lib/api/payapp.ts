@@ -26,7 +26,7 @@ export interface PayAppRecurringRequest {
   linkkey: string;          // API 연동 키 (필수)
   goodname: string;         // 상품명 (필수)
   goodprice: number;        // 정기결제 금액 (필수)
-  recvphone?: string;        // 고객 휴대폰 번호 (선택적)
+  recvphone?: string;        // 고객 휴대폰 번호 (PayApp API 필수, 없으면 기본값 사용)
   recvemail?: string;        // 수신자 이메일 (구매자 이메일, 선택적)
   rebillCycleType: 'Month' | 'Week' | 'Day'; // 결제 주기 타입 (필수)
   rebillCycleMonth?: string; // 월 주기인 경우: 매월 결제일 (1~31)
@@ -125,10 +125,8 @@ export async function createPayAppRecurringLink(
     formData.append('linkkey', params.linkkey); // 필수: API 연동 키
     formData.append('goodname', params.goodname);
     formData.append('goodprice', String(params.goodprice));
-    // recvphone은 선택적 파라미터 (값이 있을 때만 전송)
-    if (params.recvphone) {
-      formData.append('recvphone', params.recvphone);
-    }
+    // recvphone은 PayApp API에서 필수 파라미터 (기본값 제공)
+    formData.append('recvphone', params.recvphone || '01000000000');
     // recvemail: 수신자 이메일 (구매자 이메일)
     if (params.recvemail) {
       formData.append('recvemail', params.recvemail);
