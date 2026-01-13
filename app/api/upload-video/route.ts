@@ -40,6 +40,7 @@ export async function POST(request: NextRequest): Promise<Response> {
             originalFilename: pathname,
           }),
           callbackUrl: `${baseUrl}/api/upload-video`, // callbackUrl 추가
+          addRandomSuffix: true, // 고유한 파일명을 위해 랜덤 접미사 추가
         };
       },
       onUploadCompleted: async ({ blob, tokenPayload }: { blob: any; tokenPayload?: string | null }) => {
