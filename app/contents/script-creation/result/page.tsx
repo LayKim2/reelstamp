@@ -183,6 +183,13 @@ function ScriptResultContent() {
     scrollToBottom(messagesContainerRefMobile.current);
   }, [messages]);
 
+  // HTML 태그를 렌더링 가능한 형태로 변환하는 헬퍼 함수
+  const renderHtml = useCallback((text: string) => {
+    if (!text) return '';
+    // <br> 태그를 실제 줄바꿈으로 변환
+    return text.replace(/<br\s*\/?>/gi, '\n');
+  }, []);
+
   // visualSource 파싱 헬퍼 함수 (메모이제이션)
   const parseVisualSource = useCallback((visualSource: string) => {
     const vsText = visualSource || '';
@@ -626,14 +633,18 @@ function ScriptResultContent() {
                 <div className="space-y-3 pr-2 pt-4">
                   {segments.map((segment, index) => {
                     const { screenContent, subtitleContent } = parseVisualSource(segment.visualSource || '');
+                    // HTML 태그를 렌더링 가능한 형태로 변환
+                    const renderedScript = renderHtml(segment.script || '');
+                    const renderedScreenContent = renderHtml(screenContent);
+                    const renderedSubtitleContent = renderHtml(subtitleContent);
 
                     return (
                       <ScriptTableRow
                         key={segment.id}
-                        segment={segment}
+                        segment={{ ...segment, script: renderedScript }}
                         index={index}
-                        screenContent={screenContent}
-                        subtitleContent={subtitleContent}
+                        screenContent={renderedScreenContent}
+                        subtitleContent={renderedSubtitleContent}
                         expandedDesignReasons={expandedDesignReasons}
                         hoveredDesignReason={hoveredDesignReason}
                         onMouseEnter={setHoveredDesignReason}
@@ -661,14 +672,18 @@ function ScriptResultContent() {
               {segments.map((segment, index) => {
                 const { screenContent, subtitleContent } = parseVisualSource(segment.visualSource || '');
                 const isExpanded = expandedMobileCards.has(segment.id);
+                // HTML 태그를 렌더링 가능한 형태로 변환
+                const renderedScript = renderHtml(segment.script || '');
+                const renderedScreenContent = renderHtml(screenContent);
+                const renderedSubtitleContent = renderHtml(subtitleContent);
 
                 return (
                   <ScriptMobileCard
                     key={segment.id}
-                    segment={segment}
+                    segment={{ ...segment, script: renderedScript }}
                     index={index}
-                    screenContent={screenContent}
-                    subtitleContent={subtitleContent}
+                    screenContent={renderedScreenContent}
+                    subtitleContent={renderedSubtitleContent}
                     isExpanded={isExpanded}
                     onToggle={(id) => {
                       setExpandedMobileCards(prev => {
