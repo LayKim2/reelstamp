@@ -38,34 +38,39 @@ export const createReelScriptFormData = (request: ReelScriptRequest): FormData =
 };
 
 /**
- * 영상 파일을 Vercel Blob에 업로드
+ * 영상 파일을 Vercel Blob에 직접 업로드 (클라이언트 업로드 방식)
+ * 클라이언트에서 직접 업로드하여 서버 부하를 줄이고 대용량 파일(400MB+) 지원
  * @param files 업로드할 영상 파일 배열
  * @returns 업로드된 URL 배열
  */
 export const uploadVideosToBlob = async (files: File[]): Promise<string[]> => {
-  const formData = new FormData();
-  files.forEach((file) => {
-    formData.append('video', file);
+  // @vercel/blob/client의 upload 함수를 동적으로 import
+  const { upload } = await import('@vercel/blob/client');
+
+  const uploadPromises = files.map(async (file) => {
+    try {
+      // 클라이언트에서 직접 업로드
+      // handleUploadUrl로 서버의 업로드 핸들러 지정
+      const blob = await upload(file.name, file, {
+        access: 'public',
+        handleUploadUrl: '/api/upload-video',
+      });
+
+      return blob.url;
+    } catch (error: any) {
+      console.error('[Video Upload Error]', error);
+      throw {
+        response: {
+          status: error.status || 500,
+          data: error.data || {},
+        },
+        message: error.message || '영상 업로드 중 오류가 발생했습니다.',
+      };
+    }
   });
 
-  const response = await fetch('/api/upload-video', {
-    method: 'POST',
-    body: formData,
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw {
-      response: {
-        status: response.status,
-        data: errorData,
-      },
-      message: errorData.error || '영상 업로드 중 오류가 발생했습니다.',
-    };
-  }
-
-  const data = await response.json();
-  return data.urls;
+  const urls = await Promise.all(uploadPromises);
+  return urls;
 };
 
 /**

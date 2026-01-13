@@ -215,53 +215,35 @@ function ScriptResultContent() {
       
       // 마크다운 테이블 행인지 확인 (| 로 시작하고 끝남)
       if (trimmedLine.startsWith('|') && trimmedLine.endsWith('|')) {
-        // 구분선(| --- |)이나 헤더(| 구간 | 시간 |)는 제외
-        if (trimmedLine.includes('---') || trimmedLine.includes('구간') || trimmedLine.includes('시간')) {
+        // 구분선(| --- |)은 제외하되, 헤더는 테이블 시작으로 표시
+        if (trimmedLine.includes('---')) {
+          isTableStarted = true;
+          return;
+        }
+        
+        // 헤더 행 체크 (구간, 시간이 포함된 행)
+        if (trimmedLine.includes('구간') && trimmedLine.includes('시간')) {
           isTableStarted = true;
           return;
         }
 
         if (isTableStarted) {
-          // 셀 데이터 추출: 앞뒤 | 제거 후 split
-          // 단순 split('|')는 문제가 있을 수 있으므로 정규식으로 처리
+          // 셀 데이터 추출: 앞뒤 | 제거 후 정확하게 분리
           const content = trimmedLine.slice(1, -1); // 앞뒤 | 제거
           
-          // | 로 분리하되, 빈 문자열은 제외
-          const cells: string[] = [];
-          let currentCell = '';
-          let inBrackets = false;
+          // 정규식으로 | 를 기준으로 분리하되, 앞뒤 공백 제거
+          // 단순 split('|')를 사용하되, 빈 셀은 제외하지 않음 (인덱스가 중요함)
+          const cells = content.split('|').map(cell => cell.trim());
           
-          for (let i = 0; i < content.length; i++) {
-            const char = content[i];
-            
-            if (char === '[') {
-              inBrackets = true;
-              currentCell += char;
-            } else if (char === ']') {
-              inBrackets = false;
-              currentCell += char;
-            } else if (char === '|' && !inBrackets) {
-              // 괄호 밖의 | 만 구분자로 사용
-              cells.push(currentCell.trim());
-              currentCell = '';
-            } else {
-              currentCell += char;
-            }
-          }
-          
-          // 마지막 셀 추가
-          if (currentCell.trim()) {
-            cells.push(currentCell.trim());
-          }
-
+          // 최소 5개 컬럼이 있어야 함 (구간, 시간, 대본, 영상 소스, 설계 이유)
           if (cells.length >= 5) {
             segments.push({
               id: `segment-${segments.length + 1}`,
-              section: cells[0].replace(/\*\*/g, ''), // **후킹** -> 후킹
-              timeline: cells[1],
-              script: cells[2],
-              visualSource: cells[3],
-              designReason: cells.slice(4).join(' | ') // 5번째 이후 모든 셀을 합침 (설계 이유가 여러 셀로 나뉠 수 있음)
+              section: cells[0].replace(/\*\*/g, '').trim(), // **후킹** -> 후킹
+              timeline: cells[1].trim(),
+              script: cells[2].trim(),
+              visualSource: cells[3].trim(),
+              designReason: cells.slice(4).join(' | ').trim() // 5번째 이후 모든 셀을 합침 (설계 이유가 여러 셀로 나뉠 수 있음)
             });
           }
         }

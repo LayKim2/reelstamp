@@ -184,20 +184,20 @@ export default function Header() {
           <div className="flex items-center gap-3">
             {/* 영상 횟수 UI (모바일) */}
             {isAuthenticated && subscription && (
-              <div className="md:hidden flex items-center gap-3 px-3 py-1.5 bg-white border border-gray-200 rounded-lg">
-                {/* 재생 버튼 아이콘 */}
-                <div className="w-5 h-5 bg-[#FF496D] rounded flex items-center justify-center flex-shrink-0">
-                  <svg width="8" height="8" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg" className="ml-0.5">
-                    <path d="M2 1L6 4L2 7V1Z" fill="white" />
-                  </svg>
-                </div>
-                {/* 숫자 */}
+            <div className="md:hidden flex items-center gap-3 px-3 py-1.5 bg-white border border-gray-200 rounded-lg">
+              {/* 재생 버튼 아이콘 */}
+              <div className="w-5 h-5 bg-[#FF496D] rounded flex items-center justify-center flex-shrink-0">
+                <svg width="8" height="8" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg" className="ml-0.5">
+                  <path d="M2 1L6 4L2 7V1Z" fill="white" />
+                </svg>
+              </div>
+              {/* 숫자 */}
                 <span className="text-base font-medium text-[#FF496D]">
                   {subscription.videoSessionUsage?.unlimited 
                     ? '∞' 
                     : subscription.videoSessionUsage?.remaining ?? 0}
                 </span>
-              </div>
+            </div>
             )}
             {/* 모바일 햄버거 메뉴 버튼 */}
             <button
@@ -231,20 +231,20 @@ export default function Header() {
             <div className="hidden md:flex items-center gap-6">
               {/* 영상 횟수 UI (PC) */}
               {isAuthenticated && subscription && (
-                <div className="flex items-center gap-4 px-4 py-2 bg-white border border-gray-200 rounded-lg min-w-[80px]">
-                  {/* 재생 버튼 아이콘 */}
-                  <div className="w-5 h-5 bg-[#FF496D] rounded flex items-center justify-center flex-shrink-0">
-                    <svg width="8" height="8" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg" className="ml-0.5">
-                      <path d="M2 1L6 4L2 7V1Z" fill="white" />
-                    </svg>
-                  </div>
-                  {/* 숫자 */}
+              <div className="flex items-center gap-4 px-4 py-2 bg-white border border-gray-200 rounded-lg min-w-[80px]">
+                {/* 재생 버튼 아이콘 */}
+                <div className="w-5 h-5 bg-[#FF496D] rounded flex items-center justify-center flex-shrink-0">
+                  <svg width="8" height="8" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg" className="ml-0.5">
+                    <path d="M2 1L6 4L2 7V1Z" fill="white" />
+                  </svg>
+                </div>
+                {/* 숫자 */}
                   <span className="text-base font-medium text-[#FF496D]">
                     {subscription.videoSessionUsage?.unlimited 
                       ? '∞' 
                       : subscription.videoSessionUsage?.remaining ?? 0}
                   </span>
-                </div>
+              </div>
               )}
               {isAuthenticated ? (
                 // 로그인 상태: 프로필 이미지 (클릭 시 메뉴 표시)
