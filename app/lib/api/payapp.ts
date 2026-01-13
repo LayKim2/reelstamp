@@ -22,6 +22,7 @@ export interface PayAppPaymentRequest {
  */
 export interface PayAppRecurringRequest {
   userid: string;           // 판매자 아이디
+  linkkey: string;          // API 연동 키
   goodname: string;         // 상품명
   goodprice: number;        // 정기결제 금액
   recvphone?: string;        // 고객 휴대폰 번호 (필수, 빈 값이면 결제창에서 입력 가능)
@@ -115,6 +116,7 @@ export async function createPayAppRecurringLink(
     const formData = new URLSearchParams();
     formData.append('cmd', 'rebillRegist');
     formData.append('userid', params.userid);
+    formData.append('linkkey', params.linkkey);
     formData.append('goodname', params.goodname);
     formData.append('goodprice', String(params.goodprice));
     // recvphone은 필수 파라미터 (더미 값 전송, 결제창에서 사용자가 수정 가능)

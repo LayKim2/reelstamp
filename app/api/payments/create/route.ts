@@ -48,9 +48,23 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. 리다이렉트 URL 및 Webhook URL 설정
-    const baseUrl =
-      process.env.NEXT_PUBLIC_BASE_URL ||
-      `${request.nextUrl.protocol}//${request.nextUrl.host}`;
+    // Vercel 배포 환경에서는 NEXT_PUBLIC_BASE_URL을 명시적으로 설정하는 것이 안전합니다.
+    // 없으면 request에서 추출하되, 프로토콜은 https로 강제합니다.
+    let baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+    if (!baseUrl) {
+      const host = request.headers.get('host') || request.nextUrl.host;
+      // Vercel 배포 환경에서는 항상 https를 사용
+      const protocol = host.includes('vercel.app') || process.env.NODE_ENV === 'production' ? 'https' : request.nextUrl.protocol.replace(':', '');
+      baseUrl = `${protocol}://${host}`;
+    }
+    
+    console.log('[Base URL 설정]', {
+      NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL,
+      computedBaseUrl: baseUrl,
+      requestHost: request.headers.get('host'),
+      requestProtocol: request.nextUrl.protocol,
+      nodeEnv: process.env.NODE_ENV,
+    });
 
     // 5. PayApp 정기결제(Recurring) 등록 요청
     //    - cmd=rebillRegist 를 사용하여 최초 1회 결제 + 정기결제 등록번호(rebill_no)를 발급
@@ -66,8 +80,10 @@ export async function POST(request: NextRequest) {
     // 2. 우리 시스템의 고유 주문번호 생성 (예: REEL-시간값)
     const internalOrderId = `REEL-${Date.now()}`;
 
+
     const payappResponse = await createPayAppRecurringLink({
       userid: merchantId,
+      linkkey: apiKey,
       // 3. 상품명에 핵심 정보(매월 결제, 취소 가능)를 명시
       goodname: `릴스탬프 ${planName} (매월 ₩${price.toLocaleString()} / 언제든 취소 가능)`,
       goodprice: price,
@@ -167,12 +183,18 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-  } catch (error) {
-    console.error('[Payment Create API Error]', error);
+  } catch (error: any) {
+    console.error('[Payment Create API Error]', {
+      message: error?.message,
+      stack: error?.stack,
+      error: error,
+      name: error?.name,
+    });
     return NextResponse.json(
       {
         success: false,
         message: '결제 요청 처리 중 서버 오류가 발생했습니다.',
+        details: error?.message || 'Unknown error',
       },
       { status: 500 }
     );
