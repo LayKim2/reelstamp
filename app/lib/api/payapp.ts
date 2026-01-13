@@ -19,20 +19,21 @@ export interface PayAppPaymentRequest {
 /**
  * PayApp 정기결제(Recurring) 등록 요청 파라미터
  * cmd = rebillRegist
+ * 참고: https://www.payapp.kr/dev_center/dev_center01.html
  */
 export interface PayAppRecurringRequest {
-  userid: string;           // 판매자 아이디
-  linkkey: string;          // API 연동 키
-  goodname: string;         // 상품명
-  goodprice: number;        // 정기결제 금액
-  recvphone?: string;        // 고객 휴대폰 번호 (필수, 빈 값이면 결제창에서 입력 가능)
-  recvemail?: string;        // 수신자 이메일 (구매자 이메일)
-  rebillCycleType: 'Month' | 'Week' | 'Day'; // 결제 주기 타입
+  userid: string;           // 판매자 아이디 (필수)
+  linkkey: string;          // API 연동 키 (필수)
+  goodname: string;         // 상품명 (필수)
+  goodprice: number;        // 정기결제 금액 (필수)
+  recvphone?: string;        // 고객 휴대폰 번호 (선택적)
+  recvemail?: string;        // 수신자 이메일 (구매자 이메일, 선택적)
+  rebillCycleType: 'Month' | 'Week' | 'Day'; // 결제 주기 타입 (필수)
   rebillCycleMonth?: string; // 월 주기인 경우: 매월 결제일 (1~31)
   rebillCycleWeek?: string;  // 주 주기인 경우: 요일
   rebillExpire?: string;     // 정기결제 만료일 (yyyy-mm-dd)
-  feedbackurl: string;       // 웹훅(결과 통보) URL
-  returnurl: string;         // 성공 후 리다이렉트 URL
+  feedbackurl: string;       // 웹훅(결과 통보) URL (필수)
+  returnurl: string;         // 성공 후 리다이렉트 URL (필수)
   var1?: string;             // 임의값 1 (주로 userId)
   var2?: string;             // 임의값 2 (planId 등)
   var3?: string;             // 임의값 3 (orderId 등)
@@ -62,8 +63,13 @@ export async function createPayAppPaymentLink(params: PayAppPaymentRequest): Pro
     formData.append('linkkey', params.linkkey);
     formData.append('goodname', params.goodname);
     formData.append('price', String(params.price));
-    formData.append('recvphone', params.recvphone || ''); // 휴대폰 번호가 없으면 기본값 설정 (페이앱 필수값인 경우 대응)
-    formData.append('memo', params.memo || '');
+    // recvphone은 선택적 파라미터 (값이 있을 때만 전송)
+    if (params.recvphone) {
+      formData.append('recvphone', params.recvphone);
+    }
+    if (params.memo) {
+      formData.append('memo', params.memo);
+    }
     formData.append('returnurl', params.returnurl);
     formData.append('feedbackurl', params.feedbackurl);
     formData.append('var1', params.var1 || '');
@@ -116,11 +122,13 @@ export async function createPayAppRecurringLink(
     const formData = new URLSearchParams();
     formData.append('cmd', 'rebillRegist');
     formData.append('userid', params.userid);
-    formData.append('linkkey', params.linkkey);
+    formData.append('linkkey', params.linkkey); // 필수: API 연동 키
     formData.append('goodname', params.goodname);
     formData.append('goodprice', String(params.goodprice));
-    // recvphone은 필수 파라미터 (더미 값 전송, 결제창에서 사용자가 수정 가능)
-    formData.append('recvphone', params.recvphone || '01000000000');
+    // recvphone은 선택적 파라미터 (값이 있을 때만 전송)
+    if (params.recvphone) {
+      formData.append('recvphone', params.recvphone);
+    }
     // recvemail: 수신자 이메일 (구매자 이메일)
     if (params.recvemail) {
       formData.append('recvemail', params.recvemail);
@@ -143,13 +151,24 @@ export async function createPayAppRecurringLink(
     formData.append('var2', params.var2 || '');
     formData.append('var3', params.var3 || '');
 
-    // 디버깅: 실제 전송되는 recvphone, recvemail 값 확인
+    // 디버깅: 실제 전송되는 파라메터 확인 (민감 정보는 마스킹)
     const formDataString = formData.toString();
     const recvphoneMatch = formDataString.match(/recvphone=([^&]*)/);
     const recvemailMatch = formDataString.match(/recvemail=([^&]*)/);
-    console.log('[PayApp] 전송되는 구매자 정보:', {
-      recvphone: recvphoneMatch ? decodeURIComponent(recvphoneMatch[1]) : 'not found',
-      recvemail: recvemailMatch ? decodeURIComponent(recvemailMatch[1]) : 'not found',
+    const linkkeyMatch = formDataString.match(/linkkey=([^&]*)/);
+    console.log('[PayApp 정기결제 요청]', {
+      cmd: 'rebillRegist',
+      userid: params.userid,
+      hasLinkkey: !!linkkeyMatch,
+      goodname: params.goodname,
+      goodprice: params.goodprice,
+      rebillCycleType: params.rebillCycleType,
+      rebillCycleMonth: params.rebillCycleMonth,
+      rebillExpire: params.rebillExpire,
+      recvphone: recvphoneMatch ? decodeURIComponent(recvphoneMatch[1]) : 'not sent',
+      recvemail: recvemailMatch ? decodeURIComponent(recvemailMatch[1]) : 'not sent',
+      feedbackurl: params.feedbackurl,
+      returnurl: params.returnurl,
     });
 
     const apiUrl = 'https://api.payapp.kr/oapi/apiLoad.html';
@@ -167,16 +186,31 @@ export async function createPayAppRecurringLink(
 
     const text = await response.text();
 
+    console.log('[PayApp 정기결제 응답]', {
+      status: response.status,
+      statusText: response.statusText,
+      responseText: text.substring(0, 500), // 처음 500자만 로깅
+    });
+
     // 응답 형식 예시: state=1&errorMessage=&rebill_no=...&payurl=...
     const result = new URLSearchParams(text);
 
-    return {
+    const payappResult = {
       state: result.get('state') || '0',
       errorMessage: result.get('errorMessage') || '',
       mul_no: result.get('mul_no') || '',
       payurl: result.get('payurl') || '',
       billingKey: result.get('rebill_no') || '',
     };
+
+    console.log('[PayApp 정기결제 파싱 결과]', {
+      state: payappResult.state,
+      hasPayurl: !!payappResult.payurl,
+      hasBillingKey: !!payappResult.billingKey,
+      errorMessage: payappResult.errorMessage,
+    });
+
+    return payappResult;
   } catch (error) {
     console.error('[PayApp Recurring Utility Error]', error);
     return {
