@@ -30,7 +30,7 @@ export const createReelScriptFormData = (request: ReelScriptRequest): FormData =
   if (request.video_urls && request.video_urls.length > 0) {
     // Vercel Blob URL을 각각 개별적으로 전송
     request.video_urls.forEach((url) => {
-      formData.append('video_urls', url);
+      formData.append('videos_url', url);
     });
   }
   

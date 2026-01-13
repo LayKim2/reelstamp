@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     
     // 2. 외부 AI API 서버로 요청 전달 (Axios 사용)
     // getServerAiApiClient()를 사용하여 쿠키의 accessToken을 헤더에 포함
-    // FormData에 video_urls가 포함되어 있으면 그대로 전달됨
+    // FormData에 videos_url이 포함되어 있으면 그대로 전달됨
     const aiApiClient = await getServerAiApiClient();
     const response = await aiApiClient.post('/ai/generate-reel-script', formData);
 

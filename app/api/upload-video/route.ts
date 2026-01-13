@@ -34,7 +34,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
         return {
           allowedContentTypes: ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm'],
-          maximumSizeInBytes: 500 * 1024 * 1024, // 500MB 제한
+          maximumSizeInBytes: 400 * 1024 * 1024, // 400MB 제한
           tokenPayload: JSON.stringify({
             userId: user.id,
             originalFilename: pathname,
