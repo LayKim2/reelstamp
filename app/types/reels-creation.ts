@@ -35,6 +35,7 @@ export interface ReelScriptResponse {
   sessionId?: string; // 세션 ID (챗봇 대화 API에 필요)
   revisionId?: string; // 리비전 ID (챗봇 대화 API에 필요)
   selectedStructureId?: string; // 선택된 구조 ID
+  selectedStructureName?: string; // 선택된 구조 이름
   inputSummary?: {
     reelTopic: string;
     userRequest: string;

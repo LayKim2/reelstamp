@@ -113,9 +113,12 @@ function ScriptResultContent() {
         const data = await getLatestReelScript(sid);
         setResultData(data);
         
-        // selectedStructureId가 있으면 alert로 표시
-        if (data.selectedStructureId) {
-          alert(`선택된 구조 ID: ${data.selectedStructureId}`);
+        // selectedStructureId와 selectedStructureName이 있으면 console.log로 출력
+        if (data.selectedStructureId || data.selectedStructureName) {
+          console.log('[Selected Structure]', {
+            selectedStructureId: data.selectedStructureId,
+            selectedStructureName: data.selectedStructureName,
+          });
         }
         
         // inputSummary에서 reelTopic 가져오기
