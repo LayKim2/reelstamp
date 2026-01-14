@@ -91,15 +91,28 @@ export async function POST(request: NextRequest) {
         }
 
         // 요청 데이터 준비
+        // orderId: var2에서 받은 우리 시스템 주문번호 (REEL-xxx) 사용
+        // paymentNo: PayApp이 생성한 결제 고유번호 (mul_no) 사용
+        // rebill_no: 정기결제 등록번호 (billingKey로 저장됨)
+        console.log('[PayApp Webhook] 결제 정보:', {
+          userId,
+          internalOrderId, // var2에서 받은 값
+          mul_no, // PayApp 결제 고유번호
+          rebill_no, // 정기결제 등록번호
+          price,
+          state,
+        });
+
         const requestBody = {
           userId: Number(userId),
-          orderId: String(internalOrderId),
+          orderId: String(internalOrderId || mul_no), // var2가 있으면 사용, 없으면 mul_no 사용
           status: status,
-          paymentNo: String(mul_no),
+          paymentNo: String(mul_no), // PayApp 결제 고유번호
           price: Number(price),
           cardName: cardName,
           cardNumberMasked: cardNumberMasked,
           pgStatusCode: Number(state),
+          billingKey: rebill_no || undefined, // 정기결제 등록번호 (있으면 포함)
         };
 
         // 내부 API 서버로 요청 전송

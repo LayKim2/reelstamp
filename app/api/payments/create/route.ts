@@ -93,9 +93,17 @@ export async function POST(request: NextRequest) {
     if (payappResponse.state === '1' && payappResponse.payurl) {
       // rebillRegist 성공 시:
       // - payurl: 최초 결제/승인용 결제창 URL
-      // - billingKey: PayApp 정기결제 등록번호 (rebill_no)
-      const orderId = internalOrderId; // PayApp 주문 ID 또는 내부 주문 ID
-      const billingKey = payappResponse.billingKey; // 정기결제용 등록번호(rebill_no)
+      // - billingKey: PayApp 정기결제 등록번호 (rebill_no) - 결제 완료 전에는 없을 수 있음
+      // - mul_no: PayApp 결제 고유번호 - 결제 완료 후 웹훅에서 받음
+      const orderId = internalOrderId; // 우리 시스템 주문번호 (REEL-xxx) - var2로 전달됨
+      const billingKey = payappResponse.billingKey; // 정기결제용 등록번호(rebill_no) - 결제 완료 전에는 비어있을 수 있음
+      
+      console.log('[Payment Create] 빌링 정보:', {
+        orderId,
+        billingKey: billingKey || '결제 완료 후 웹훅에서 받음',
+        planCode: planId,
+        userId: user.id,
+      });
 
       // 6. 내부 API 서버로 빌링 정보 전송
       try {
