@@ -9,7 +9,6 @@ interface ScriptTableRowProps {
   segment: ScriptSegment;
   index: number;
   screenContent: string;
-  subtitleContent: string;
   expandedDesignReasons: Set<string>;
   hoveredDesignReason: string | null;
   onMouseEnter: (id: string) => void;
@@ -21,7 +20,6 @@ const ScriptTableRow = memo(function ScriptTableRow({
   segment,
   index,
   screenContent,
-  subtitleContent,
   expandedDesignReasons,
   hoveredDesignReason,
   onMouseEnter,
@@ -68,18 +66,6 @@ const ScriptTableRow = memo(function ScriptTableRow({
           </p>
         </div>
         
-        {/* 자막 파트 */}
-        {subtitleContent && (
-          <div className="flex items-start gap-3 pr-12">
-            <span className="bg-[#F8F9FA] text-[#FF496D] text-[10px] font-bold px-2 py-1 rounded flex-shrink-0 mt-0.5 min-w-[36px] text-center">
-              자막
-            </span>
-            <p className="text-[13px] text-[#373A46] leading-relaxed">
-              {subtitleContent}
-            </p>
-          </div>
-        )}
-
         {/* 설계 이유 아이콘 (오른쪽 아래) */}
         <div className="absolute right-4 bottom-4">
           <button

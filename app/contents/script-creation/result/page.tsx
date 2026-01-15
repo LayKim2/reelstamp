@@ -245,17 +245,12 @@ function ScriptResultContent() {
   // visualSource 파싱 헬퍼 함수 (메모이제이션)
   const parseVisualSource = useCallback((visualSource: string) => {
     const vsText = visualSource || '';
-    // '자막:' 앞에 어떤 단어가 오든 분리할 수 있도록 수정
-    const parts = vsText.split(/자막\s*:\s*/);
-    const screenContent = parts[0]
+    const screenContent = vsText
       .replace(/^원본\s*영상\s*:\s*/, '')
       .replace(/^원본\s*\(.*?\)\s*:\s*/, '')
       .replace(/^원본\s*:\s*/, '')
       .trim();
-    const subtitleContent = parts[1] 
-      ? parts[1].replace(/[\.\*]$/, '').trim() 
-      : '';
-    return { screenContent, subtitleContent };
+    return { screenContent };
   }, []);
 
   // segments 메모이제이션 (resultData가 변경될 때만 재계산)
@@ -526,15 +521,14 @@ function ScriptResultContent() {
 
     // 엑셀 데이터 준비
     const excelData = segments.map((segment, index) => {
-      const { screenContent, subtitleContent } = parseVisualSource(segment.visualSource || '');
+      const { screenContent } = parseVisualSource(segment.visualSource || '');
 
       return {
         '순번': index + 1,
         '구간': segment.section,
         '타임라인(초)': segment.timeline,
         '대본': segment.script,
-        '화면': screenContent,
-        '자막': subtitleContent,
+        '화면 설계': screenContent,
         '설계 이유': segment.designReason,
       };
     });
@@ -549,8 +543,7 @@ function ScriptResultContent() {
       { wch: 12 }, // 구간
       { wch: 15 }, // 타임라인
       { wch: 40 }, // 대본
-      { wch: 40 }, // 화면
-      { wch: 30 }, // 자막
+      { wch: 50 }, // 화면 설계
       { wch: 50 }, // 설계 이유
     ];
 
@@ -695,11 +688,10 @@ function ScriptResultContent() {
                 {/* 테이블 바디 (전체 표시) */}
                 <div className="space-y-3 pr-2 pt-4">
                   {segments.map((segment, index) => {
-                    const { screenContent, subtitleContent } = parseVisualSource(segment.visualSource || '');
+                    const { screenContent } = parseVisualSource(segment.visualSource || '');
                     // HTML 태그를 렌더링 가능한 형태로 변환
                     const renderedScript = renderHtml(segment.script || '');
                     const renderedScreenContent = renderHtml(screenContent);
-                    const renderedSubtitleContent = renderHtml(subtitleContent);
 
                     return (
                       <ScriptTableRow
@@ -707,7 +699,6 @@ function ScriptResultContent() {
                         segment={{ ...segment, script: renderedScript }}
                         index={index}
                         screenContent={renderedScreenContent}
-                        subtitleContent={renderedSubtitleContent}
                         expandedDesignReasons={expandedDesignReasons}
                         hoveredDesignReason={hoveredDesignReason}
                         onMouseEnter={setHoveredDesignReason}
@@ -733,12 +724,11 @@ function ScriptResultContent() {
             {/* 모바일 카드 형태 (전체 표시) */}
             <div className="lg:hidden space-y-4 pr-2 pt-4">
               {segments.map((segment, index) => {
-                const { screenContent, subtitleContent } = parseVisualSource(segment.visualSource || '');
+                const { screenContent } = parseVisualSource(segment.visualSource || '');
                 const isExpanded = expandedMobileCards.has(segment.id);
                 // HTML 태그를 렌더링 가능한 형태로 변환
                 const renderedScript = renderHtml(segment.script || '');
                 const renderedScreenContent = renderHtml(screenContent);
-                const renderedSubtitleContent = renderHtml(subtitleContent);
 
                 return (
                   <ScriptMobileCard
@@ -746,7 +736,6 @@ function ScriptResultContent() {
                     segment={{ ...segment, script: renderedScript }}
                     index={index}
                     screenContent={renderedScreenContent}
-                    subtitleContent={renderedSubtitleContent}
                     isExpanded={isExpanded}
                     onToggle={(id) => {
                       setExpandedMobileCards(prev => {

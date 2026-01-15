@@ -9,7 +9,6 @@ interface ScriptMobileCardProps {
   segment: ScriptSegment;
   index: number;
   screenContent: string;
-  subtitleContent: string;
   isExpanded: boolean;
   onToggle: (id: string) => void;
 }
@@ -18,7 +17,6 @@ const ScriptMobileCard = memo(function ScriptMobileCard({
   segment,
   index,
   screenContent,
-  subtitleContent,
   isExpanded,
   onToggle,
 }: ScriptMobileCardProps) {
@@ -97,18 +95,6 @@ const ScriptMobileCard = memo(function ScriptMobileCard({
             {screenContent}
           </p>
         </div>
-
-        {/* 자막 */}
-        {subtitleContent && (
-          <div>
-            <div className="text-xs font-bold text-[#86889C] mb-2 uppercase tracking-wider">
-              자막
-            </div>
-            <p className="text-sm text-[#373A46] leading-relaxed">
-              {subtitleContent}
-            </p>
-          </div>
-        )}
       </div>
     </motion.div>
   );
