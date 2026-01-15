@@ -91,7 +91,7 @@ const ScriptMobileCard = memo(function ScriptMobileCard({
           <div className="text-xs font-bold text-[#86889C] mb-2 uppercase tracking-wider">
             화면
           </div>
-          <p className="text-sm text-[#373A46] leading-relaxed">
+          <p className="text-sm text-[#373A46] leading-relaxed whitespace-pre-wrap">
             {screenContent}
           </p>
         </div>

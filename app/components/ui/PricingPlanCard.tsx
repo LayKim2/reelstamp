@@ -20,6 +20,7 @@ interface PricingPlanCardProps {
   isAuthenticated: boolean;
   isCurrentPlan: boolean;
   buttonText: string;
+  isDisabled?: boolean;
 }
 
 export default function PricingPlanCard({
@@ -34,11 +35,14 @@ export default function PricingPlanCard({
   isAuthenticated,
   isCurrentPlan,
   buttonText,
+  isDisabled = false,
 }: PricingPlanCardProps) {
   const router = useRouter();
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
 
   const handlePayment = async () => {
+    if (isDisabled) return;
+    
     if (!isAuthenticated) {
       router.push('/login');
       return;
@@ -86,11 +90,11 @@ export default function PricingPlanCard({
       eventBenefit={eventBenefit}
       isPopular={isPopular}
       buttonType="button"
-      buttonText={isPaymentProcessing ? '처리 중...' : buttonText}
+      buttonText={isDisabled ? '준비 중' : isPaymentProcessing ? '처리 중...' : buttonText}
       buttonOnClick={handlePayment}
       isCurrentPlan={isCurrentPlan}
-      buttonDisabled={isPaymentProcessing || isCurrentPlan}
-      buttonClassName="bg-[#FF496D] text-white hover:bg-[#E63E62]"
+      buttonDisabled={isDisabled || isPaymentProcessing || isCurrentPlan}
+      buttonClassName={isDisabled ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-[#FF496D] text-white hover:bg-[#E63E62]'}
     />
   );
 }

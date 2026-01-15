@@ -31,6 +31,16 @@ export default async function PricingPage() {
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
+        {/* 상단 타이틀 및 안내 문구 */}
+        <div className="text-center mb-12 lg:mb-16">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-[#373A46] mb-4">
+            요금제 안내
+          </h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            현재 구독 서비스 준비 중입니다. 조만간 더 좋은 기능으로 찾아뵙겠습니다.
+          </p>
+        </div>
+
         {/* 플랜 카드 컨테이너 */}
         <div className="flex flex-col lg:flex-row justify-center items-stretch gap-6 lg:gap-8">
           {/* Free 플랜 카드 */}
@@ -41,8 +51,8 @@ export default async function PricingPage() {
             eventBenefit={freePlanEventBenefit}
             buttonType="link"
             buttonText="무료 플랜 시작하기"
-            buttonHref={isAuthenticated ? undefined : '/login'}
-            hideButton={isAuthenticated}
+            buttonHref={isAuthenticated ? '/contents/script-creation' : '/login'}
+            hideButton={false}
             buttonClassName="bg-gray-700 text-white hover:bg-gray-800"
           />
 
@@ -50,7 +60,7 @@ export default async function PricingPage() {
           <PricingPlanCard
             planId="basic"
             planName="Basic"
-            price="₩1,000"
+            price="₩4,900"
             priceNumber={1000}
             discountInfo={{
               percentage: '75%',
@@ -60,6 +70,7 @@ export default async function PricingPage() {
             eventBenefit={basicPlanEventBenefit}
             isAuthenticated={isAuthenticated}
             isCurrentPlan={isAuthenticated && currentPlanCode === 'basic' && isActive}
+            isDisabled={true}
             buttonText={
               isAuthenticated && currentPlanCode === 'basic' && isActive 
                 ? '현재 플랜' 
@@ -83,6 +94,7 @@ export default async function PricingPage() {
             isPopular={true}
             isAuthenticated={isAuthenticated}
             isCurrentPlan={isAuthenticated && currentPlanCode === 'pro' && isActive}
+            isDisabled={true}
             buttonText={
               isAuthenticated && currentPlanCode === 'pro' && isActive 
                 ? '현재 플랜' 
@@ -105,6 +117,7 @@ export default async function PricingPage() {
             features={masterPlanFeatures}
             isAuthenticated={isAuthenticated}
             isCurrentPlan={isAuthenticated && currentPlanCode === 'master' && isActive}
+            isDisabled={true}
             buttonText={
               isAuthenticated && currentPlanCode === 'master' && isActive 
                 ? '현재 플랜' 

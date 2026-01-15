@@ -30,36 +30,36 @@ export default function PricingSection() {
             planName="Free" price="₩0" features={freePlanFeatures}
             eventBenefit={freePlanEventBenefit} buttonType="link" 
             buttonText="무료 플랜 시작하기"
-            buttonHref="/pricing" 
-            hideButton={isAuthenticated && !isLoadingSubscription}
+            buttonHref={isAuthenticated ? '/contents/script-creation' : '/login'} 
+            hideButton={false}
             buttonClassName="bg-gray-700 text-white hover:bg-gray-800"
           />
           <PlanCard
             planName="Basic" price="₩4,900" features={basicPlanFeatures}
             discountInfo={{ percentage: '75%', originalPrice: '19,900원' }}
-            eventBenefit={basicPlanEventBenefit} buttonType="link" 
-            buttonText={isAuthenticated && !isLoadingSubscription && currentPlanCode === 'basic' && isActive ? '현재 플랜' : '구독하기'}
-            buttonHref="/pricing" 
+            eventBenefit={basicPlanEventBenefit} buttonType="button" 
+            buttonText="준비 중"
+            buttonDisabled={true}
             isCurrentPlan={isAuthenticated && !isLoadingSubscription && currentPlanCode === 'basic' && isActive}
-            buttonClassName="bg-[#FF496D] text-white hover:bg-[#E63E62]"
+            buttonClassName="bg-gray-400 text-white cursor-not-allowed"
           />
           <PlanCard
             planName="Pro" price="₩9,900" features={proPlanFeatures}
             discountInfo={{ percentage: '80%', originalPrice: '49,900원' }}
-            isPopular buttonType="link" 
-            buttonText={isAuthenticated && !isLoadingSubscription && currentPlanCode === 'pro' && isActive ? '현재 플랜' : '구독하기'}
-            buttonHref="/pricing" 
+            isPopular buttonType="button" 
+            buttonText="준비 중"
+            buttonDisabled={true}
             isCurrentPlan={isAuthenticated && !isLoadingSubscription && currentPlanCode === 'pro' && isActive}
-            buttonClassName="bg-[#FF496D] text-white hover:bg-[#E63E62]"
+            buttonClassName="bg-gray-400 text-white cursor-not-allowed"
           />
           <PlanCard
             planName="Master" price="₩49,900" features={masterPlanFeatures}
             discountInfo={{ percentage: '75%', originalPrice: '199,900원' }}
-            buttonType="link" 
-            buttonText={isAuthenticated && !isLoadingSubscription && currentPlanCode === 'master' && isActive ? '현재 플랜' : '구독하기'}
-            buttonHref="/pricing" 
+            buttonType="button" 
+            buttonText="준비 중"
+            buttonDisabled={true}
             isCurrentPlan={isAuthenticated && !isLoadingSubscription && currentPlanCode === 'master' && isActive}
-            buttonClassName="bg-[#FF496D] text-white hover:bg-[#E63E62]"
+            buttonClassName="bg-gray-400 text-white cursor-not-allowed"
           />
         </div>
       </div>

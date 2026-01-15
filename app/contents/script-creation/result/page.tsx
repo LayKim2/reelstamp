@@ -249,6 +249,8 @@ function ScriptResultContent() {
       .replace(/^원본\s*영상\s*:\s*/, '')
       .replace(/^원본\s*\(.*?\)\s*:\s*/, '')
       .replace(/^원본\s*:\s*/, '')
+      // '원본A', '원본B' 등 영상 소스 식별자가 나오면 앞에 줄바꿈 삽입 (문장 시작점 제외)
+      .replace(/(?!^)(원본[A-Z])/g, '<br>$1')
       .trim();
     return { screenContent };
   }, []);

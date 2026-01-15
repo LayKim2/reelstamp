@@ -61,7 +61,7 @@ const ScriptTableRow = memo(function ScriptTableRow({
           <span className="bg-[#FFF0F3] text-[#FF496D] text-[10px] font-bold px-2 py-1 rounded flex-shrink-0 mt-0.5 min-w-[36px] text-center">
             화면
           </span>
-          <p className="text-[13px] text-[#373A46] leading-relaxed">
+          <p className="text-[13px] text-[#373A46] leading-relaxed whitespace-pre-wrap">
             {screenContent}
           </p>
         </div>
