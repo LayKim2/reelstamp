@@ -24,7 +24,7 @@ html, body {
 body {
   background: linear-gradient(to bottom right, rgba(253, 244, 255, 0.2), white, rgba(255, 237, 213, 0.2));
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 }
 
 /* Instagram Embed 스타일 */

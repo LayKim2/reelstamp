@@ -28,6 +28,16 @@ export default function BottomCTASection() {
             지금 무료로 릴스탬프 시작하기
             <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6" />
           </Link>
+          <Link
+            href="https://forms.gle/Sp2nQE9L7yx7k99b6"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="alarm-button inline-flex items-center justify-center gap-2 px-8 py-4 text-lg sm:text-xl font-bold text-white rounded-full transition-all hover:opacity-90"
+            style={{ background: 'linear-gradient(90deg, #A9A9A9 0%, #D4D4D4 100%)', borderRadius: '135px' }}
+          >
+            서비스 정식 출시 알람 신청하기
+            <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6" />
+          </Link>
         </div>
       </div>
     </section>

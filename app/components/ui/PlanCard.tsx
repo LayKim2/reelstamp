@@ -99,9 +99,21 @@ export default function PlanCard({
                     <div className="text-base text-gray-700 leading-relaxed mb-1">{feature.main}</div>
                     <div className="pl-0 space-y-0.5">
                       {feature.subItems?.map((subItem, subIndex) => (
-                        <div key={subIndex} className="text-base text-gray-700 leading-relaxed flex items-start gap-1">
-                          <span className="text-[#FF496D] mr-1">•</span>
-                          <span>{subItem}</span>
+                        <div key={subIndex} className="flex items-center">
+                          <span 
+                            className="sub-item-text"
+                            style={{
+                              fontStyle: 'normal',
+                              fontWeight: 400,
+                              fontSize: '14px',
+                              lineHeight: '150%',
+                              letterSpacing: '-0.03em',
+                              fontFeatureSettings: "'pnum' on, 'lnum' on",
+                              color: '#6C6E7F',
+                            }}
+                          >
+                            {subItem}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -124,21 +136,44 @@ export default function PlanCard({
           <div className="mb-6">
             <div className="text-base font-bold text-[#FF496D] mb-2 text-center">{eventBenefit.title}</div>
             <div className="space-y-2">
-              <div className="flex items-start gap-2">
-                <Check className="w-5 h-5 text-[#FF496D] flex-shrink-0 mt-0.5" />
-                <span className="text-base text-gray-700 leading-relaxed">{eventBenefit.mainItem}</span>
+              <div className="flex items-center justify-center gap-2">
+                <Check className="w-5 h-5 text-[#FF496D] flex-shrink-0" />
+                <span className="text-base text-gray-700 leading-relaxed text-center">{eventBenefit.mainItem}</span>
               </div>
-              <div className="pl-7 space-y-0.5">
-                <div className="text-base text-gray-700 flex items-start gap-1">
-                  <span className="text-[#FF496D] mr-1">•</span>
-                  <span>{eventBenefit.subItems[0]}</span>
+              <div className="space-y-0.5">
+                <div className="flex items-center justify-center">
+                  <span 
+                    className="sub-item-text"
+                    style={{
+                      fontStyle: 'normal',
+                      fontWeight: 400,
+                      fontSize: '14px',
+                      lineHeight: '150%',
+                      letterSpacing: '-0.03em',
+                      fontFeatureSettings: "'pnum' on, 'lnum' on",
+                      color: '#6C6E7F',
+                      textAlign: 'center',
+                    }}
+                  >
+                    {eventBenefit.subItems[0]}
+                  </span>
                 </div>
-                <div className="text-base text-gray-700 flex items-start gap-1">
-                  <span className="text-[#FF496D] mr-1">•</span>
-                  <span>{eventBenefit.subItems[1]}</span>
-                </div>
-                <div className="text-base text-gray-700 pl-6">
-                  {eventBenefit.subItems[2]}
+                <div className="flex items-center justify-center">
+                  <span 
+                    className="sub-item-text"
+                    style={{
+                      fontStyle: 'normal',
+                      fontWeight: 400,
+                      fontSize: '14px',
+                      lineHeight: '150%',
+                      letterSpacing: '-0.03em',
+                      fontFeatureSettings: "'pnum' on, 'lnum' on",
+                      color: '#6C6E7F',
+                      textAlign: 'center',
+                    }}
+                  >
+                    {eventBenefit.subItems[1]}
+                  </span>
                 </div>
               </div>
             </div>

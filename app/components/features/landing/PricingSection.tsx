@@ -20,7 +20,9 @@ export default function PricingSection() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12 sm:mb-16">
           <p className="text-xl sm:text-2xl text-gray-600 mb-3">성장을 위한 가장 확실한 투자</p>
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">조회수가 터지는 습관, 릴스탬프 플랜</h2>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
+            <span className="text-[#FF496D]">오픈 특가!</span> 조회수가 터지는 습관, 릴스탬프 플랜
+          </h2>
         </div>
 
         <div className="flex flex-col lg:flex-row justify-center items-stretch gap-6 lg:gap-8">

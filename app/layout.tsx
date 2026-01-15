@@ -1,7 +1,7 @@
 // 루트 레이아웃 컴포넌트: 모든 페이지에 공통으로 적용되는 최상위 레이아웃
 // 헤더와 메인 콘텐츠 영역을 포함하는 기본 구조
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Praise } from "next/font/google";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import Script from "next/script";
 import "./globals.css";
@@ -21,6 +21,13 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+// Praise 폰트 설정: Beta 텍스트용
+const praise = Praise({
+  variable: "--font-praise",
+  subsets: ["latin"],
+  weight: "400",
 });
 
 // 메타데이터 설정: SEO 및 브라우저 탭에 표시되는 정보
@@ -46,6 +53,12 @@ export default async function RootLayout({
   return (
     <html lang="ko" className="h-full">
       <head>
+        {/* Pretendard 폰트 CDN */}
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+        <link
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
+          rel="stylesheet"
+        />
         {/* Instagram 도메인 사전 연결 - 로딩 속도 최적화 */}
         <link rel="preconnect" href="https://www.instagram.com" />
         <link rel="dns-prefetch" href="https://www.instagram.com" />
@@ -53,7 +66,7 @@ export default async function RootLayout({
         <link rel="dns-prefetch" href="https://static.cdninstagram.com" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased h-full`}
+        className={`${geistSans.variable} ${geistMono.variable} ${praise.variable} antialiased h-full`}
       >
         <QueryProvider>
           <AuthProvider initialUser={initialUser}>

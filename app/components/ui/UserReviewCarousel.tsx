@@ -50,8 +50,8 @@ export default function UserReviewCarousel() {
     },
     {
       name: '잭영',
-      handle: '@hongik_university',
-      youtubeViews: '2.8만',
+      handle: '@2_jack_0',
+      youtubeViews: '',
       instagramViews: '6380',
       text: '릴스탬프를 사용하고 콘텐츠 제작 시간을 많이 단축했습니다! 덕분에 더 자주 업로드할 수 있을것 같아요.',
       highlightedNumber: '',

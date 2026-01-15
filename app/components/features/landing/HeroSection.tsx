@@ -55,13 +55,28 @@ export default function HeroSection() {
           </div>
 
           <div className="relative z-10 flex flex-col items-center max-w-4xl w-full px-4 -mt-4 sm:-mt-8">
+            <motion.span
+              className="open-beta-text text-[40px] sm:text-[50px] md:text-[60px] lg:text-[70px] font-normal leading-[150%] tracking-[-0.03em] text-center mb-4 sm:mb-6"
+              style={{
+                fontFamily: 'var(--font-praise), serif',
+                background: 'linear-gradient(180deg, #FFFFFF 0%, #FFB4C7 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: 'easeOut' }}
+            >
+              Open Beta version
+            </motion.span>
             <motion.h1 
               className="text-3xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight mb-6 sm:mb-8 px-2"
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: 'easeOut' }}
             >
-              <span className="text-gray-900">100만 릴스 제작 파트너,</span>
+              <span className="text-gray-900">당신의 릴스 성공 공식, </span>
               <br className="sm:hidden" />
               <span className="text-[#FF496D]">릴스탬프</span>
             </motion.h1>
@@ -76,7 +91,7 @@ export default function HeroSection() {
                 밤새 고민하던 릴스 대본과 영상,
               </p>
               <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-700">
-                이제 검증된 알고리즘 공식으로 1분 만에 만드세요!
+                이제 검증된 알고리즘 공식으로 1분 만에 끝내세요!
               </p>
             </motion.div>
 

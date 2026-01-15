@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState, Suspense, useRef, useCallback, useMemo } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, ChevronDown, ChevronUp, Sparkles, Layout } from 'lucide-react';
@@ -12,6 +12,7 @@ import { chatReelScript, getLatestReelScript, applyReelScript } from '@/app/lib/
 import { useAuth } from '@/app/components/providers/AuthProvider';
 import ScriptTableRow from '@/app/components/features/script-creation/ScriptTableRow';
 import ScriptMobileCard from '@/app/components/features/script-creation/ScriptMobileCard';
+import SatisfactionSurvey from '@/app/components/ui/SatisfactionSurvey';
 
 // 챗봇 관련 컴포넌트는 지연 로드 (초기 번들 크기 감소)
 // 챗봇이 열릴 때만 필요하므로 dynamic import로 최적화
@@ -56,10 +57,13 @@ export default function ScriptResultPage() {
 function ScriptResultContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const { user } = useAuth();
   const [resultData, setResultData] = useState<ReelScriptResponse | null>(null);
   const [reelTopic, setReelTopic] = useState<string>(''); // 릴스 주제
   const [chatMessage, setChatMessage] = useState('');
+  const [showSurvey, setShowSurvey] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
   
   // 메시지창 스크롤을 위한 ref (PC와 모바일 각각)
   const messagesContainerRefPC = useRef<HTMLDivElement>(null);
@@ -154,6 +158,46 @@ function ScriptResultContent() {
       setRevisionId(storedRevisionId);
     }
   }, [urlSessionId, router]);
+
+  // 앱 내에서 다른 페이지로 이동할 때 감지 (고객센터만 제외)
+  const handleLinkClick = useCallback((e: MouseEvent) => {
+    const target = e.target as HTMLElement;
+    const link = target.closest('a');
+    
+    if (!link || !link.href) return;
+    
+    const href = link.href;
+    const currentOrigin = window.location.origin;
+    
+    // 같은 도메인, 고객센터 링크 제외
+    if (!href.startsWith(currentOrigin) || href.includes('forms.gle/iZKQVJe78DPgaUF8A')) {
+      return;
+    }
+    
+    // 같은 도메인 내에서 다른 페이지로 이동하는 경우
+    const currentPathname = window.location.pathname;
+    const url = new URL(href);
+    
+    if (url.pathname !== currentPathname) {
+      const surveyShown = sessionStorage.getItem('satisfactionSurveyShown');
+      if (!surveyShown) {
+        e.preventDefault();
+        e.stopPropagation();
+        setPendingNavigation(href);
+        setShowSurvey(true);
+        sessionStorage.setItem('satisfactionSurveyShown', 'true');
+      }
+    }
+  }, [setPendingNavigation, setShowSurvey]);
+
+  useEffect(() => {
+    // 모든 링크 클릭 감지 (capture phase에서)
+    document.addEventListener('click', handleLinkClick, true);
+
+    return () => {
+      document.removeEventListener('click', handleLinkClick, true);
+    };
+  }, [handleLinkClick]);
 
   // 초기 AI 메시지 타이핑 효과 (reelTopic이 변경되면 다시 시작)
   useEffect(() => {
@@ -408,6 +452,20 @@ function ScriptResultContent() {
             isLoading: false
           };
         }
+        
+        // 3번째 질문 후 답변을 받았을 때 만족도 조사 팝업 표시
+        const userMessageCount = newMessages.filter(msg => msg.role === 'user').length;
+        if (userMessageCount === 3) {
+          const surveyShown = sessionStorage.getItem('satisfactionSurveyShown');
+          if (!surveyShown) {
+            // 약간의 딜레이 후 팝업 표시 (답변이 완전히 렌더링된 후)
+            setTimeout(() => {
+              setShowSurvey(true);
+              sessionStorage.setItem('satisfactionSurveyShown', 'true');
+            }, 500);
+          }
+        }
+        
         return newMessages;
       });
       
@@ -844,6 +902,32 @@ function ScriptResultContent() {
           background: #D1D1DB;
         }
       `}</style>
+
+      {/* 만족도 조사 팝업 */}
+      <SatisfactionSurvey 
+        isOpen={showSurvey} 
+        onClose={() => {
+          const nav = pendingNavigation;
+          setShowSurvey(false);
+          setPendingNavigation(null);
+          
+          // 팝업이 닫힌 후 대기 중인 네비게이션 실행
+          if (nav) {
+            // 일반 페이지 이동
+            const url = new URL(nav);
+            const currentUrl = new URL(window.location.href);
+            if (url.origin === currentUrl.origin) {
+              setTimeout(() => {
+                router.push(url.pathname + url.search);
+              }, 100);
+            } else {
+              setTimeout(() => {
+                window.location.href = nav;
+              }, 100);
+            }
+          }
+        }} 
+      />
     </div>
   );
 }

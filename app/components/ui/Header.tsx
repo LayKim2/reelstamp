@@ -16,6 +16,7 @@ interface MenuItem {
   href: string;
   label: string;
   matchPattern?: (pathname: string) => boolean;
+  isExternal?: boolean;
 }
 
 // 메뉴 항목 상수
@@ -33,6 +34,11 @@ const MENU_ITEMS: MenuItem[] = [
     href: '/pricing',
     label: '요금제',
     matchPattern: (pathname) => pathname.startsWith('/pricing'),
+  },
+  {
+    href: 'https://forms.gle/iZKQVJe78DPgaUF8A',
+    label: '고객센터',
+    isExternal: true,
   },
 ];
 
@@ -143,7 +149,7 @@ export default function Header() {
           <div className="flex items-center">
             <Link 
               href="/" 
-              className="flex items-center"
+              className="flex items-center gap-2"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               <span 
@@ -157,6 +163,18 @@ export default function Header() {
               >
                 Reelstamp
               </span>
+              <span 
+                className="beta-text text-[22px] md:text-[26px] font-normal leading-[150%] tracking-[-0.03em]"
+                style={{ 
+                  fontFamily: 'var(--font-praise), serif',
+                  background: 'linear-gradient(180deg, #FFB4C7 0%, #FF496D 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
+              >
+                Beta
+              </span>
             </Link>
           </div>
 
@@ -168,6 +186,8 @@ export default function Header() {
                 <Link
                   key={item.href}
                   href={item.href}
+                  target={item.isExternal ? '_blank' : undefined}
+                  rel={item.isExternal ? 'noopener noreferrer' : undefined}
                   className={`text-lg transition-colors ${
                     active
                       ? 'text-[#FF496D] font-extrabold'
@@ -426,6 +446,8 @@ export default function Header() {
                           <Link
                             key={item.href}
                             href={item.href}
+                            target={item.isExternal ? '_blank' : undefined}
+                            rel={item.isExternal ? 'noopener noreferrer' : undefined}
                             onClick={() => setIsMobileMenuOpen(false)}
                               className={`w-full block px-5 py-3.5 text-lg rounded-xl transition-colors ${
                                 active
