@@ -245,8 +245,10 @@ function ScriptResultContent() {
   // visualSource 파싱 헬퍼 함수 (메모이제이션)
   const parseVisualSource = useCallback((visualSource: string) => {
     const vsText = visualSource || '';
+    // '자막:' 앞에 어떤 단어가 오든 분리할 수 있도록 수정
     const parts = vsText.split(/자막\s*:\s*/);
     const screenContent = parts[0]
+      .replace(/^원본\s*영상\s*:\s*/, '')
       .replace(/^원본\s*\(.*?\)\s*:\s*/, '')
       .replace(/^원본\s*:\s*/, '')
       .trim();
@@ -272,39 +274,34 @@ function ScriptResultContent() {
     lines.forEach((line) => {
       const trimmedLine = line.trim();
       
-      // 마크다운 테이블 행인지 확인 (| 로 시작하고 끝남)
-      if (trimmedLine.startsWith('|') && trimmedLine.endsWith('|')) {
-        // 구분선(| --- |)은 제외하되, 헤더는 테이블 시작으로 표시
-        if (trimmedLine.includes('---')) {
-          isTableStarted = true;
-          return;
-        }
-        
-        // 헤더 행 체크 (구간, 시간이 포함된 행)
-        if (trimmedLine.includes('구간') && trimmedLine.includes('시간')) {
-          isTableStarted = true;
-          return;
-        }
+      // 1. 테이블 시작 감지 (구간, 시간 헤더가 있고 | 가 포함된 경우)
+      if (trimmedLine.includes('구간') && trimmedLine.includes('시간') && trimmedLine.includes('|')) {
+        isTableStarted = true;
+        return;
+      }
 
-        if (isTableStarted) {
-          // 셀 데이터 추출: 앞뒤 | 제거 후 정확하게 분리
-          const content = trimmedLine.slice(1, -1); // 앞뒤 | 제거
-          
-          // 정규식으로 | 를 기준으로 분리하되, 앞뒤 공백 제거
-          // 단순 split('|')를 사용하되, 빈 셀은 제외하지 않음 (인덱스가 중요함)
-          const cells = content.split('|').map(cell => cell.trim());
-          
-          // 최소 5개 컬럼이 있어야 함 (구간, 시간, 대본, 영상 소스, 설계 이유)
-          if (cells.length >= 5) {
-            segments.push({
-              id: `segment-${segments.length + 1}`,
-              section: cells[0].replace(/\*\*/g, '').trim(), // **후킹** -> 후킹
-              timeline: cells[1].trim(),
-              script: cells[2].trim(),
-              visualSource: cells[3].trim(),
-              designReason: cells.slice(4).join(' | ').trim() // 5번째 이후 모든 셀을 합침 (설계 이유가 여러 셀로 나뉠 수 있음)
-            });
-          }
+      // 2. 구분선(| --- |) 무시
+      if (trimmedLine.includes('---') && trimmedLine.includes('|')) {
+        isTableStarted = true;
+        return;
+      }
+
+      // 3. 데이터 행 처리
+      if (isTableStarted && trimmedLine.includes('|')) {
+        // 앞뒤에 |가 있을 수도 있고 없을 수도 있으므로, 양 끝의 |를 제거한 뒤 split
+        const cleanLine = trimmedLine.replace(/^\||\|$/g, '');
+        const cells = cleanLine.split('|').map(cell => cell.trim());
+        
+        // 최소 5개 컬럼이 있어야 함 (구간, 시간, 대본, 영상 소스, 설계 이유)
+        if (cells.length >= 5) {
+          segments.push({
+            id: `segment-${segments.length + 1}`,
+            section: cells[0].replace(/\*\*/g, '').trim(),
+            timeline: cells[1].trim(),
+            script: cells[2].trim(),
+            visualSource: cells[3].trim(),
+            designReason: cells.slice(4).join(' | ').trim()
+          });
         }
       }
     });
