@@ -2,18 +2,24 @@
 
 import { useState, useEffect } from 'react';
 import { Star, X } from 'lucide-react';
+import { submitSatisfactionSurvey } from '@/app/actions/satisfaction-survey';
+import { usePathname } from 'next/navigation';
 
 interface SatisfactionSurveyProps {
   isOpen: boolean;
   onClose: () => void;
+  userId?: number;
+  userEmail?: string;
 }
 
-export default function SatisfactionSurvey({ isOpen, onClose }: SatisfactionSurveyProps) {
+export default function SatisfactionSurvey({ isOpen, onClose, userId, userEmail }: SatisfactionSurveyProps) {
   const [rating, setRating] = useState(0);
   const [hoveredRating, setHoveredRating] = useState(0);
   const [positives, setPositives] = useState('');
   const [negatives, setNegatives] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const pathname = usePathname();
 
   // 팝업이 열렸을 때 body 스크롤 막기
   useEffect(() => {
@@ -45,18 +51,35 @@ export default function SatisfactionSurvey({ isOpen, onClose }: SatisfactionSurv
     };
   }, [isOpen]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (rating === 0) {
       alert('별점을 선택해주세요');
       return;
     }
-    // 여기서 실제 제출 로직 처리
-    console.log({
-      rating,
-      positives,
-      negatives
-    });
-    setIsSubmitted(true);
+
+    setIsSubmitting(true);
+
+    try {
+      const result = await submitSatisfactionSurvey({
+        rating,
+        positives,
+        negatives,
+        userId,
+        userEmail,
+        page: pathname || '',
+      });
+
+      if (result.success) {
+        setIsSubmitted(true);
+      } else {
+        alert(result.message || '제출 중 오류가 발생했습니다.');
+      }
+    } catch (error) {
+      console.error('만족도 조사 제출 오류:', error);
+      alert('제출 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleClose = () => {
@@ -189,11 +212,12 @@ export default function SatisfactionSurvey({ isOpen, onClose }: SatisfactionSurv
         <div className="flex gap-3">
           <button
             onClick={handleSubmit}
-            className="w-full text-white py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity"
+            disabled={isSubmitting}
+            className="w-full text-white py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ backgroundColor: '#FF496D' }}
             type="button"
           >
-            제출
+            {isSubmitting ? '제출 중...' : '제출'}
           </button>
         </div>
       </div>

@@ -905,7 +905,9 @@ function ScriptResultContent() {
 
       {/* 만족도 조사 팝업 */}
       <SatisfactionSurvey 
-        isOpen={showSurvey} 
+        isOpen={showSurvey}
+        userId={user?.id}
+        userEmail={user?.email}
         onClose={() => {
           const nav = pendingNavigation;
           setShowSurvey(false);
