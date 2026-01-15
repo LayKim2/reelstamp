@@ -36,7 +36,7 @@ const MENU_ITEMS: MenuItem[] = [
     matchPattern: (pathname) => pathname.startsWith('/pricing'),
   },
   {
-    href: 'https://forms.gle/iZKQVJe78DPgaUF8A',
+    href: 'https://pf.kakao.com/_Bbyxon',
     label: '고객센터',
     isExternal: true,
   },
