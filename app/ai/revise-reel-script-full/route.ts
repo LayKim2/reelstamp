@@ -15,10 +15,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 외부 AI API 서버로 요청 전달 (POST /ai/reels-creation/revise-script-full)
+    // 외부 AI API 서버로 요청 전달 (POST /ai/revise-reel-script-full)
     // getServerAiApiClient()를 사용하여 쿠키의 accessToken을 헤더에 포함
     const aiApiClient = await getServerAiApiClient();
-    const response = await aiApiClient.post('/ai/reels-creation/revise-script-full', {
+    const response = await aiApiClient.post('/ai/revise-reel-script-full', {
       sessionId,
       parentRevisionId,
       suggestedChange
