@@ -590,12 +590,13 @@ export default function ScriptCreationPage() {
                       adjustTextareaHeight(e.target as HTMLTextAreaElement);
                     }}
                     rows={4}
+                    maxLength={5000}
                     placeholder="릴스에 담고 싶은 내용을 자유롭게 작성해주세요.&#10;구체적일수록 나만의 컨셉이 반영된 기획과 대본이 제공됩니다."
                     className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#FF6B8A] focus:ring-4 focus:ring-pink-100 resize-none overflow-hidden text-base text-gray-900 placeholder:text-base placeholder:text-gray-400 transition-all shadow-sm"
                     required
                   />
                   <div className="absolute bottom-3 right-3 text-xs text-gray-400">
-                    {content.length}/1000
+                    {content.length}/5000
                   </div>
                 </div>
               </div>

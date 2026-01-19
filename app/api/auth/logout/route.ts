@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
     // 쿠키에서 토큰 제거
     cookieStore.delete('accessToken');
     cookieStore.delete('refreshToken');
+    cookieStore.delete('providerAccessToken');
 
     return NextResponse.json({
       success: true,
