@@ -95,30 +95,11 @@ export async function getServerApiClient(): Promise<AxiosInstance> {
         const accessToken = cookieStore.get('accessToken')?.value;
         const refreshToken = cookieStore.get('refreshToken')?.value;
         
-        // 모든 쿠키 목록 확인
-        const allCookies = cookieStore.getAll().map(c => c.name);
-        
-        console.log('[getServerApiClient] 요청 인터셉터 - 쿠키 확인', {
-          hasAccessToken: !!accessToken,
-          hasRefreshToken: !!refreshToken,
-          accessTokenLength: accessToken?.length,
-          refreshTokenLength: refreshToken?.length,
-          allCookies: allCookies,
-          url: config.url
-        });
-
         if (accessToken) {
           config.headers.Authorization = `Bearer ${accessToken}`;
-        } else {
-          console.warn('[getServerApiClient] Access token이 쿠키에 없음', {
-            hasRefreshToken: !!refreshToken,
-            allCookies: allCookies,
-            url: config.url
-          });
         }
       } catch (error) {
         // 토큰 추출 실패 시 무시하고 진행
-        console.error('[getServerApiClient] 쿠키 읽기 실패', error);
       }
 
       return config;
@@ -153,25 +134,9 @@ export async function getServerApiClient(): Promise<AxiosInstance> {
 
         try {
           const cookieStore = await cookies();
-          const accessToken = cookieStore.get('accessToken')?.value;
           const refreshToken = cookieStore.get('refreshToken')?.value;
-          
-          // 모든 쿠키 목록 확인
-          const allCookies = cookieStore.getAll().map(c => c.name);
-
-          console.log('[getServerApiClient] 토큰 갱신 시도', {
-            hasAccessToken: !!accessToken,
-            hasRefreshToken: !!refreshToken,
-            accessTokenLength: accessToken?.length,
-            refreshTokenLength: refreshToken?.length,
-            allCookies: allCookies
-          });
 
           if (!refreshToken) {
-            console.error('[getServerApiClient] Refresh token이 쿠키에 없음', {
-              allCookies: allCookies,
-              url: originalRequest.url
-            });
             throw new Error('Refresh token이 없습니다.');
           }
 
@@ -186,13 +151,6 @@ export async function getServerApiClient(): Promise<AxiosInstance> {
           // HTTPS인 경우에만 secure: true 설정 (HTTP에서도 작동하도록)
           const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
           const isSecure = baseUrl.startsWith('https://');
-          
-          console.log('[getServerApiClient] 토큰 갱신 후 쿠키 저장', {
-            hasNewToken: !!newTokenInfo.accessToken,
-            hasNewRefreshToken: !!newTokenInfo.refreshToken,
-            baseUrl: baseUrl,
-            isSecure: isSecure
-          });
           
           cookieStore.set('accessToken', newTokenInfo.accessToken, {
             httpOnly: true,
@@ -212,17 +170,6 @@ export async function getServerApiClient(): Promise<AxiosInstance> {
             });
           }
           
-          // 쿠키 저장 후 확인
-          const savedAccessToken = cookieStore.get('accessToken')?.value;
-          const savedRefreshToken = cookieStore.get('refreshToken')?.value;
-          
-          console.log('[getServerApiClient] 쿠키 저장 완료 확인', {
-            hasSavedAccessToken: !!savedAccessToken,
-            hasSavedRefreshToken: !!savedRefreshToken,
-            savedAccessTokenLength: savedAccessToken?.length,
-            savedRefreshTokenLength: savedRefreshToken?.length
-          });
-
           // 대기 중인 요청들 처리
           processQueue(null, newTokenInfo.accessToken);
 

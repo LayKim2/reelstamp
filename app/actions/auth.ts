@@ -146,19 +146,10 @@ export async function getSubscriptionStatusAction(): Promise<{
   message?: string;
 }> {
   try {
-    console.log('[getSubscriptionStatusAction] 구독 상태 조회 시작');
     const { getServerApiClient } = await import('@/app/lib/api/server-client');
     const apiClient = await getServerApiClient();
     
-    console.log('[getSubscriptionStatusAction] API 클라이언트 생성 완료, 요청 전송 중...');
     const response = await apiClient.get<WebApiResponse<SubscriptionStatusResponse>>('/api/subscription/status');
-
-    console.log('[getSubscriptionStatusAction] API 응답:', {
-      success: response.data.success,
-      status: response.data.status,
-      message: response.data.message,
-      data: response.data.data,
-    });
 
     if (response.data.success && response.data.data) {
       return {
@@ -167,7 +158,6 @@ export async function getSubscriptionStatusAction(): Promise<{
       };
     }
 
-    console.log('[getSubscriptionStatusAction] 구독 정보를 가져올 수 없음');
     return {
       success: false,
       message: '구독 정보를 가져올 수 없습니다.',

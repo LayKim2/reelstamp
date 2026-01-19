@@ -28,6 +28,7 @@ export interface UserInfo {
   nickname: string;
   socialNickname: string;
   profileImageUrl: string;
+  role: string;
 }
 
 export interface LoginResponseData {
@@ -123,16 +124,15 @@ export async function getCurrentUser(): Promise<UserInfo | null> {
     const response = await apiClient.get<WebApiResponse<UserInfo>>('/api/user/me');
     
     // 응답 구조 확인
+    let userData: UserInfo | null = null;
     if (response.data && response.data.success && response.data.data) {
-      return response.data.data;
+      userData = response.data.data;
+    } else if (response.data && (response.data as any).data) {
+      userData = (response.data as any).data;
     }
     
-    // 응답 구조가 다른 경우 직접 data 확인
-    if (response.data && (response.data as any).data) {
-      return (response.data as any).data;
-    }
     
-    return null;
+    return userData;
   } catch (error: any) {
     // 에러 로깅 (개발 환경에서 더 상세하게)
     const statusCode = error.response?.status;

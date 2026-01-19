@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/app/components/providers/AuthProvider';
+import { USER_ROLES } from '@/app/lib/constants/auth';
 import { User, Sparkles, Settings, LogOut, ChevronRight } from 'lucide-react';
 import SettingsModal from '@/app/components/ui/SettingsModal';
 
@@ -47,6 +48,9 @@ export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const { isAuthenticated, user, logout, subscription } = useAuth();
+  
+  const isAdmin = user?.role?.toUpperCase() === USER_ROLES.ADMIN;
+  
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -198,6 +202,19 @@ export default function Header() {
                 </Link>
               );
             })}
+            {/* Admin 메뉴 (ADMIN role만 표시) */}
+            {isAuthenticated && isAdmin && (
+              <Link
+                href="/admin"
+                className={`text-lg transition-colors ${
+                  pathname.startsWith('/admin')
+                    ? 'text-[#FF496D] font-extrabold'
+                    : 'text-gray-700 hover:text-gray-900 font-medium'
+                }`}
+              >
+                관리자
+              </Link>
+            )}
           </nav>
 
           {/* 우측: 가입/로그인 버튼 및 모바일 메뉴 */}
@@ -459,6 +476,20 @@ export default function Header() {
                           </Link>
                         );
                       })}
+                      {/* Admin 메뉴 (ADMIN role만 표시) */}
+                      {isAuthenticated && isAdmin && (
+                        <Link
+                          href="/admin"
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className={`w-full block px-5 py-3.5 text-lg rounded-xl transition-colors ${
+                            pathname.startsWith('/admin')
+                              ? 'text-[#FF496D] font-extrabold bg-[#FF496D]/10 shadow-sm'
+                              : 'text-gray-900 font-medium hover:bg-gray-50'
+                          }`}
+                        >
+                          관리자
+                        </Link>
+                      )}
                     </div>
                     {/* 화면 맨 밑에 버튼 배치 */}
                     <div className="w-full flex flex-col gap-3 mt-auto pt-6">
