@@ -5,7 +5,7 @@ import { useEffect, useState, Suspense, useRef, useCallback, useMemo } from 'rea
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, ChevronDown, ChevronUp, Sparkles, Layout } from 'lucide-react';
+import { Send, ChevronDown, ChevronUp, Sparkles, Layout, Archive } from 'lucide-react';
 import Image from 'next/image';
 import { ReelScriptResponse, ScriptSegment, ChatReelScriptResponse } from '@/app/types/reels-creation';
 import { chatReelScript, getLatestReelScript, applyReelScript } from '@/app/lib/api/reels-creation';
@@ -22,15 +22,6 @@ const ChatMessage = dynamic(() => import('@/app/components/features/script-creat
 const ChatInput = dynamic(() => import('@/app/components/features/script-creation/ChatInput'), {
   ssr: false,
 });
-
-// XLSX는 엑셀 다운로드 버튼 클릭 시에만 로드 (초기 번들 크기 감소)
-let XLSX: any = null;
-const loadXLSX = async () => {
-  if (!XLSX) {
-    XLSX = await import('xlsx');
-  }
-  return XLSX;
-};
 
 // 헤더 컴포넌트 분리 (이미지 디자인의 독립된 박스 형태)
 const TableHeader = ({ title, className }: { title: string; className: string }) => (
@@ -512,54 +503,59 @@ function ScriptResultContent() {
     }
   }, [sessionId, chatMessage, isLoading]);
 
-  // 엑셀 다운로드 핸들러: 대본 테이블을 엑셀 파일로 다운로드 (메모이제이션, XLSX 지연 로드)
-  const handleDownloadExcel = useCallback(async () => {
-    if (!resultData || segments.length === 0) {
+  // ZIP 내보내기 핸들러: 백엔드 export API를 호출하여 ZIP 파일 다운로드
+  const handleExportZip = useCallback(async () => {
+    if (!revisionId) {
+      alert('내보낼 대본 정보를 찾을 수 없습니다.');
       return;
     }
 
-    // XLSX 라이브러리 지연 로드
-    const xlsx = await loadXLSX();
+    try {
+      const response = await fetch(`/api/script/revisions/${revisionId}/export`, {
+        method: 'GET',
+      });
 
-    // 엑셀 데이터 준비
-    const excelData = segments.map((segment, index) => {
-      const { screenContent } = parseVisualSource(segment.visualSource || '');
+      if (!response.ok) {
+        throw new Error('ZIP 내보내기 중 오류가 발생했습니다.');
+      }
 
-      return {
-        '순번': index + 1,
-        '구간': segment.section,
-        '타임라인(초)': segment.timeline,
-        '대본': segment.script,
-        '화면 설계': screenContent,
-        '설계 이유': segment.designReason,
-      };
-    });
+      const blob = await response.blob();
 
-    // 워크북 생성
-    const wb = xlsx.utils.book_new();
-    const ws = xlsx.utils.json_to_sheet(excelData);
+      // 파일명 추출 (Content-Disposition 헤더 우선 사용)
+      const disposition = response.headers.get('Content-Disposition');
+      let filename = '';
+      if (disposition && disposition.includes('filename=')) {
+        const match = disposition.match(/filename\*=UTF-8''(.+)|filename="?([^\";]+)"?/);
+        const encoded = match?.[1] || match?.[2];
+        if (encoded) {
+          try {
+            filename = decodeURIComponent(encoded);
+          } catch {
+            filename = encoded;
+          }
+        }
+      }
 
-    // 컬럼 너비 설정
-    ws['!cols'] = [
-      { wch: 8 },  // 순번
-      { wch: 12 }, // 구간
-      { wch: 15 }, // 타임라인
-      { wch: 40 }, // 대본
-      { wch: 50 }, // 화면 설계
-      { wch: 50 }, // 설계 이유
-    ];
+      if (!filename) {
+        const dateStr = new Date().toISOString().split('T')[0];
+        filename = reelTopic 
+          ? `${reelTopic}_대본_${dateStr}.zip`
+          : `reel-script-${dateStr}.zip`;
+      }
 
-    // 워크시트 추가
-    xlsx.utils.book_append_sheet(wb, ws, '대본');
-
-    // 파일명 생성 (릴스 주제 포함)
-    const fileName = reelTopic 
-      ? `${reelTopic}_대본_${new Date().toISOString().split('T')[0]}.xlsx`
-      : `대본_${new Date().toISOString().split('T')[0]}.xlsx`;
-
-    // 파일 다운로드
-    xlsx.writeFile(wb, fileName);
-  }, [resultData, segments, reelTopic, parseVisualSource]);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      console.error('ZIP export 실패:', error);
+      alert(error?.message || 'ZIP 내보내기 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    }
+  }, [revisionId, reelTopic]);
 
 
   if (!resultData) {
@@ -587,44 +583,30 @@ function ScriptResultContent() {
             </div>
           )}
 
-          {/* 엑셀 다운로드 버튼 (모바일: title과 같은 행 오른쪽, PC: 챗봇 버튼과 함께) */}
+          {/* ZIP 내보내기 버튼 (모바일: title과 같은 행 오른쪽, PC: 챗봇 버튼과 함께) */}
           <div className="flex lg:hidden">
             <motion.button
-              onClick={handleDownloadExcel}
+              onClick={handleExportZip}
               className="group relative flex items-center justify-center w-10 h-10 rounded-xl border border-[#EDEDF1] bg-white text-[#373A46] hover:bg-gray-50 transition-all shadow-sm"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              title="엑셀로 다운로드"
+              title="ZIP으로 내보내기"
             >
-              <Image
-                src="/images/icon_excel.png"
-                alt="엑셀 다운로드"
-                width={24}
-                height={24}
-                className="w-6 h-6"
-                unoptimized
-              />
+              <Archive className="w-5 h-5 text-[#373A46]" />
             </motion.button>
           </div>
 
-          {/* 상단 챗봇 토글 버튼 및 엑셀 다운로드 버튼 (PC 전용) */}
+          {/* 상단 챗봇 토글 버튼 및 ZIP 내보내기 버튼 (PC 전용) */}
           <div className="hidden lg:flex items-center gap-3">
-            {/* 엑셀 다운로드 버튼 */}
+            {/* ZIP 내보내기 버튼 */}
             <motion.button
-              onClick={handleDownloadExcel}
+              onClick={handleExportZip}
               className="group relative flex items-center justify-center w-10 h-10 rounded-xl border border-[#EDEDF1] bg-white text-[#373A46] hover:bg-gray-50 transition-all shadow-sm"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              title="엑셀로 다운로드"
+              title="ZIP으로 내보내기"
             >
-              <Image
-                src="/images/icon_excel.png"
-                alt="엑셀 다운로드"
-                width={24}
-                height={24}
-                className="w-6 h-6"
-                unoptimized
-              />
+              <Archive className="w-5 h-5 text-[#373A46]" />
             </motion.button>
 
             {/* 챗봇 토글 버튼 */}
