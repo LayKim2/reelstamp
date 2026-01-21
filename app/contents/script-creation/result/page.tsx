@@ -23,6 +23,11 @@ const ChatInput = dynamic(() => import('@/app/components/features/script-creatio
   ssr: false,
 });
 
+// 대본 생성/압축 공통 로딩 오버레이 (GIF) - 클라이언트 전용
+const LoadingOverlay = dynamic(() => import('@/app/components/ui/LoadingOverlay'), {
+  ssr: false,
+});
+
 // 헤더 컴포넌트 분리 (이미지 디자인의 독립된 박스 형태)
 const TableHeader = ({ title, className }: { title: string; className: string }) => (
   <div className={`bg-[#373A46] text-white py-3 px-4 rounded-xl text-center font-bold text-sm ${className}`}>
@@ -97,7 +102,8 @@ function ScriptResultContent() {
     return true; // SSR 시 기본값
   });
   const [isTyping, setIsTyping] = useState(true); // 타이핑 중인지 여부
-  const [isLoading, setIsLoading] = useState(false); // API 호출 중인지 여부
+  const [isLoading, setIsLoading] = useState(false); // 챗봇 API 호출 중인지 여부
+  const [isExporting, setIsExporting] = useState(false); // ZIP 내보내기 진행 여부
   const [expandedDesignReasons, setExpandedDesignReasons] = useState<Set<string>>(new Set()); // 설계 이유 말풍선 표시 상태 (클릭)
   const [hoveredDesignReason, setHoveredDesignReason] = useState<string | null>(null); // 설계 이유 말풍선 표시 상태 (hover)
   const [expandedMobileCards, setExpandedMobileCards] = useState<Set<string>>(new Set()); // 모바일 카드 확장 상태
@@ -505,12 +511,15 @@ function ScriptResultContent() {
 
   // ZIP 내보내기 핸들러: 백엔드 export API를 호출하여 ZIP 파일 다운로드
   const handleExportZip = useCallback(async () => {
+    if (isExporting) return;
+
     if (!revisionId) {
       alert('내보낼 대본 정보를 찾을 수 없습니다.');
       return;
     }
 
     try {
+      setIsExporting(true);
       const response = await fetch(`/api/script/revisions/${revisionId}/export`, {
         method: 'GET',
       });
@@ -554,8 +563,10 @@ function ScriptResultContent() {
     } catch (error: any) {
       console.error('ZIP export 실패:', error);
       alert(error?.message || 'ZIP 내보내기 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    } finally {
+      setIsExporting(false);
     }
-  }, [revisionId, reelTopic]);
+  }, [revisionId, reelTopic, isExporting]);
 
 
   if (!resultData) {
@@ -570,7 +581,7 @@ function ScriptResultContent() {
   }
 
   return (
-    <div className="bg-gradient-to-b from-white to-pink-50/30">
+    <div className="relative bg-gradient-to-b from-white to-pink-50/30">
       <div className="w-full px-4 sm:px-6 lg:px-8 pt-10 sm:pt-14 lg:pt-12 pb-24 lg:pb-16">
         {/* 페이지 타이틀과 챗봇 토글 버튼 (PC: 같은 row, 모바일: 같은 행 오른쪽 정렬) */}
         <div className="flex flex-row items-center justify-between gap-4 mb-6 lg:mb-8">
@@ -587,7 +598,8 @@ function ScriptResultContent() {
           <div className="flex lg:hidden">
             <motion.button
               onClick={handleExportZip}
-              className="group relative flex items-center justify-center w-10 h-10 rounded-xl border border-[#EDEDF1] bg-white text-[#373A46] hover:bg-gray-50 transition-all shadow-sm"
+              disabled={isExporting}
+              className="group relative flex items-center justify-center w-10 h-10 rounded-xl border border-[#EDEDF1] bg-white text-[#373A46] hover:bg-gray-50 transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               title="ZIP으로 내보내기"
@@ -601,7 +613,8 @@ function ScriptResultContent() {
             {/* ZIP 내보내기 버튼 */}
             <motion.button
               onClick={handleExportZip}
-              className="group relative flex items-center justify-center w-10 h-10 rounded-xl border border-[#EDEDF1] bg-white text-[#373A46] hover:bg-gray-50 transition-all shadow-sm"
+              disabled={isExporting}
+              className="group relative flex items-center justify-center w-10 h-10 rounded-xl border border-[#EDEDF1] bg-white text-[#373A46] hover:bg-gray-50 transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               title="ZIP으로 내보내기"
@@ -872,6 +885,9 @@ function ScriptResultContent() {
           background: #D1D1DB;
         }
       `}</style>
+
+      {/* ZIP 내보내기 로딩 오버레이 (대본 생성 때 쓰는 것과 동일 스타일) */}
+      <LoadingOverlay isVisible={isExporting} text="압축 파일 생성 중" />
 
       {/* 만족도 조사 팝업 */}
       <SatisfactionSurvey 
