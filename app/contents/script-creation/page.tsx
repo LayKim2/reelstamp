@@ -323,8 +323,8 @@ export default function ScriptCreationPage() {
       // 현재 경로를 저장하고 로그인 페이지로 리다이렉트
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('previousPath', pathname);
+        router.push(`/login?returnUrl=${encodeURIComponent(pathname)}`);
       }
-      router.push('/login');
       return;
     }
     

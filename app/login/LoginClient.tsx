@@ -53,19 +53,21 @@ export default function LoginClient() {
       }
     }, 1000);
 
-    // URL 파라미터 확인 (인가 코드 처리)
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
     const state = urlParams.get('state');
+    const returnUrl = urlParams.get('returnUrl');
+
+    if (returnUrl && !sessionStorage.getItem('previousPath')) {
+      sessionStorage.setItem('previousPath', returnUrl);
+    }
 
     if (code && !isProcessing && !isAuthenticated) {
       setIsProcessing(true);
       
-      // URL에서 code와 state 제거 (중복 처리 방지 및 보안)
-      const cleanUrl = window.location.pathname;
+      const cleanUrl = window.location.pathname + (returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : '');
       window.history.replaceState({}, '', cleanUrl);
 
-      // state가 있으면 네이버, 없으면 카카오로 판단
       if (state) {
         handleNaverCode(code, state);
       } else {

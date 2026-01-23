@@ -28,6 +28,11 @@ const MENU_ITEMS: MenuItem[] = [
     matchPattern: (pathname) => pathname.startsWith('/contents'),
   },
   {
+    href: '/my-reels',
+    label: '나의 릴스',
+    matchPattern: (pathname) => pathname.startsWith('/my-reels'),
+  },
+  {
     href: '/ranking',
     label: '인기 급상승 릴스',
   },
