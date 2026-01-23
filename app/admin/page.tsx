@@ -1,14 +1,20 @@
 // 관리자 페이지: 대본 생성 내역 관리
 'use client';
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, X, Calendar, Search, Filter, User, Tag, ChevronDown, RefreshCw } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { Loader2, X, Calendar, Search, Filter, User, Tag, ChevronDown, RefreshCw, Archive } from 'lucide-react';
 import { useAuth } from '@/app/components/providers/AuthProvider';
 import { useAdminRevisions } from '@/app/hooks/useAdminRevisions';
 import { USER_ROLES } from '@/app/lib/constants/auth';
 import ScriptTableRow from '@/app/components/features/script-creation/ScriptTableRow';
 import { ScriptSegment } from '@/app/types/reels-creation';
+
+// ZIP 내보내기 로딩 오버레이 (지연 로드)
+const LoadingOverlay = dynamic(() => import('@/app/components/ui/LoadingOverlay'), {
+  ssr: false,
+});
 
 // 카테고리 옵션 (Internal Type 값 사용)
 const CATEGORY_OPTIONS = [
@@ -165,24 +171,16 @@ export default function AdminPage() {
   const [expandedDesignReasons, setExpandedDesignReasons] = useState<Set<string>>(new Set());
   const [expandedRequests, setExpandedRequests] = useState<Set<string>>(new Set());
   const [hoveredDesignReason, setHoveredDesignReason] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false); // ZIP 내보내기 진행 여부
 
-  // Admin 권한 없으면 리다이렉트
-  useEffect(() => {
-    if (!isAdmin) {
-      router.replace('/');
-    }
-  }, [isAdmin, router]);
+  // 클라이언트 사이드 무한 스크롤을 위한 상태
+  const [visibleCount, setVisibleCount] = useState(10);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  if (!isAdmin) {
-    return (
-      <div className="admin-page-guard flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-      </div>
-    );
-  }
-
+  // 전체 revisions
   const revisions = useMemo(() => data?.data?.revisions ?? [], [data]);
 
+  // 필터 + 검색을 적용한 결과
   const filteredRevisions = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
 
@@ -227,6 +225,95 @@ export default function AdminPage() {
     });
   }, [revisions, searchKeyword, categoryFilter, userTypeFilter, startDate, endDate]);
 
+  // 모달이 열려 있을 때는 백그라운드(body) 스크롤 비활성화
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    if (selectedRevisionId) {
+      // 현재 스크롤 위치 저장
+      const scrollY = window.scrollY;
+      const html = document.documentElement;
+      const body = document.body;
+
+      // body와 html 모두 스크롤 잠금
+      body.style.position = 'fixed';
+      body.style.top = `-${scrollY}px`;
+      body.style.width = '100%';
+      body.style.overflow = 'hidden';
+      html.style.overflow = 'hidden';
+
+      // 모바일에서 터치 스크롤 방지
+      const preventTouchMove = (e: TouchEvent) => {
+        if (e.target && (e.target as Element).closest('[data-modal-content]')) {
+          return; // 모달 내부는 스크롤 허용
+        }
+        e.preventDefault();
+      };
+      document.addEventListener('touchmove', preventTouchMove, { passive: false });
+
+      return () => {
+        // 스크롤 복원
+        body.style.position = '';
+        body.style.top = '';
+        body.style.width = '';
+        body.style.overflow = '';
+        html.style.overflow = '';
+        document.removeEventListener('touchmove', preventTouchMove);
+        // 저장된 스크롤 위치로 복원
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [selectedRevisionId]);
+
+  // 화면에 표시할 개수만 잘라낸 리스트
+  const visibleRevisions = useMemo(
+    () => filteredRevisions.slice(0, visibleCount),
+    [filteredRevisions, visibleCount],
+  );
+
+  // Admin 권한 없으면 리다이렉트
+  useEffect(() => {
+    if (!isAdmin) {
+      router.replace('/');
+    }
+  }, [isAdmin, router]);
+
+  // 필터/검색이 바뀌면 처음 10개부터 다시 시작
+  useEffect(() => {
+    setVisibleCount(10);
+  }, [searchKeyword, categoryFilter, userTypeFilter, startDate, endDate, revisions]);
+
+  // 클라이언트 사이드 무한 스크롤: Intersection Observer로 스크롤 감지
+  useEffect(() => {
+    if (!loadMoreRef.current) return;
+    if (visibleRevisions.length >= filteredRevisions.length) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((prev) =>
+            Math.min(prev + 10, filteredRevisions.length),
+          );
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(loadMoreRef.current);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [visibleRevisions.length, filteredRevisions.length]);
+
+  if (!isAdmin) {
+    return (
+      <div className="admin-page-guard flex items-center justify-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
   // 결과 대본 팝업 열기
   const handleOpenResult = useCallback((revisionId: string, scriptText: string) => {
     setSelectedRevisionId(revisionId);
@@ -254,10 +341,90 @@ export default function AdminPage() {
     });
   }, []);
 
-  // 선택된 대본의 세그먼트 파싱
-  const selectedSegments = useMemo(() => {
-    if (!selectedScriptText) return [];
-    return parseScriptToSegments(selectedScriptText);
+  // ZIP 내보내기 핸들러: 백엔드 export API를 호출하여 ZIP 파일 다운로드
+  const handleExportZip = useCallback(async () => {
+    if (isExporting || !selectedRevisionId) return;
+
+    try {
+      setIsExporting(true);
+      const response = await fetch(`/api/script/revisions/${selectedRevisionId}/export`, {
+        method: 'GET',
+      });
+
+      if (!response.ok) {
+        throw new Error('ZIP 내보내기 중 오류가 발생했습니다.');
+      }
+
+      const blob = await response.blob();
+
+      // 파일명 추출 (Content-Disposition 헤더 우선 사용)
+      const disposition = response.headers.get('Content-Disposition');
+      let filename = '';
+      if (disposition && disposition.includes('filename=')) {
+        const match = disposition.match(/filename\*=UTF-8''(.+)|filename="?([^\";]+)"?/);
+        const encoded = match?.[1] || match?.[2];
+        if (encoded) {
+          try {
+            filename = decodeURIComponent(encoded);
+          } catch {
+            filename = encoded;
+          }
+        }
+      }
+
+      if (!filename) {
+        const dateStr = new Date().toISOString().split('T')[0];
+        filename = `reel-script-${selectedRevisionId}-${dateStr}.zip`;
+      }
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      console.error('ZIP export 실패:', error);
+      alert(error?.message || 'ZIP 내보내기 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    } finally {
+      setIsExporting(false);
+    }
+  }, [selectedRevisionId, isExporting]);
+
+  // 선택된 대본의 세그먼트 (모달 내에서만 사용)
+  const [selectedSegments, setSelectedSegments] = useState<ScriptSegment[]>([]);
+  // 애니메이션 완료 여부 (한 번만 실행)
+  const [hasAnimated, setHasAnimated] = useState(false);
+
+  // 선택된 대본의 세그먼트를 비동기적으로 파싱 (모달 껍데기 먼저 렌더링 후 내용 채우기)
+  useEffect(() => {
+    if (!selectedScriptText) {
+      setSelectedSegments([]);
+      setHasAnimated(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    // 메인 스레드를 잠그지 않도록 다음 틱으로 파싱을 미룸
+    const timer = window.setTimeout(() => {
+      if (cancelled) return;
+      const segments = parseScriptToSegments(selectedScriptText);
+      setSelectedSegments(segments);
+      // 파싱 완료 후 애니메이션 플래그 설정 (다음 프레임에서)
+      requestAnimationFrame(() => {
+        if (!cancelled) {
+          setHasAnimated(true);
+        }
+      });
+    }, 0);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [selectedScriptText]);
 
   // Vercel Blob URL 구성
@@ -279,7 +446,7 @@ export default function AdminPage() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <button 
+              <button
                 onClick={() => refetch()}
                 className="p-3 bg-white hover:bg-gray-50 text-gray-400 hover:text-gray-600 rounded-2xl border border-gray-100 shadow-sm transition-all active:scale-95"
                 title="새로고침"
@@ -288,7 +455,9 @@ export default function AdminPage() {
               </button>
               <div className="bg-white/80 backdrop-blur px-5 py-3 rounded-2xl border border-pink-100 shadow-sm flex items-center gap-3">
                 <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></span>
-                <span className="text-sm font-black text-gray-700">전체 {filteredRevisions.length}건</span>
+                <span className="text-sm font-black text-gray-700">
+                  전체 {filteredRevisions.length}건 (표시: {visibleRevisions.length}건)
+                </span>
               </div>
             </div>
           </div>
@@ -332,6 +501,7 @@ export default function AdminPage() {
               </div>
             )}
 
+            {/* 전체 데이터 자체가 없을 때만 표시 (최초 상태) */}
             {!isLoading && !error && revisions.length === 0 && (
               <div className="admin-page-empty bg-white rounded-[40px] p-24 shadow-sm text-center border border-gray-100">
                 <div className="w-24 h-24 bg-gray-50 text-gray-200 rounded-[35px] flex items-center justify-center mx-auto mb-8">
@@ -416,10 +586,10 @@ export default function AdminPage() {
             )}
 
             {/* 리스트 영역 */}
-            {!isLoading && !error && filteredRevisions.length > 0 && (
+            {!isLoading && !error && visibleRevisions.length > 0 && (
               <div className="overflow-x-auto pb-10 custom-scrollbar-horizontal -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
                 <div className="admin-page-list space-y-6 min-w-[1200px]">
-                  {filteredRevisions.map((item) => {
+                  {visibleRevisions.map((item) => {
                   const userInfo = item.user;
                   const userDisplayName = userInfo?.nickname || userInfo?.socialNickname || userInfo?.email || '알 수 없음';
                   const isUserAdmin = userInfo?.role === USER_ROLES.ADMIN;
@@ -561,7 +731,7 @@ export default function AdminPage() {
               </div>
             )}
 
-            {!isLoading && !error && filteredRevisions.length === 0 && revisions.length > 0 && (
+            {!isLoading && !error && filteredRevisions.length > 0 && visibleRevisions.length === 0 && (
               <div className="admin-page-empty bg-white rounded-[50px] p-32 shadow-2xl shadow-pink-500/5 text-center border border-gray-100">
                 <div className="w-32 h-32 bg-pink-50 text-[#FF496D] rounded-[45px] flex items-center justify-center mx-auto mb-8 shadow-inner">
                   <RefreshCw className="w-16 h-16 opacity-50" />
@@ -570,14 +740,31 @@ export default function AdminPage() {
                 <button onClick={() => { setSearchKeyword(''); setCategoryFilter('ALL'); setUserTypeFilter('ALL'); setStartDate(''); setEndDate(''); }} className="px-10 py-4 rounded-2xl bg-pink-50 text-[#FF496D] text-lg font-black hover:bg-[#FF496D] hover:text-white transition-all active:scale-95 shadow-sm">필터 초기화</button>
               </div>
             )}
+
+            {/* 무한 스크롤 로딩 인디케이터 & 센티넬 */}
+            {!isLoading && !error && visibleRevisions.length < filteredRevisions.length && (
+              <div ref={loadMoreRef} className="flex justify-center py-8">
+                <div className="flex items-center gap-3 text-gray-400">
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                  <span className="text-sm font-bold">다음 10개 로딩 중...</span>
+                </div>
+              </div>
+            )}
+
+            {/* 더 이상 불러올 데이터가 없을 때 */}
+            {!isLoading && !error && visibleRevisions.length >= filteredRevisions.length && filteredRevisions.length > 0 && (
+              <div className="flex justify-center py-8">
+                <p className="text-sm text-gray-400 font-bold">모든 데이터를 불러왔습니다.</p>
+              </div>
+            )}
           </div>
         </section>
       </div>
 
       {/* 결과 대본 팝업 모달 */}
       {selectedRevisionId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl transition-all duration-700">
-          <div className="bg-white rounded-[50px] shadow-2xl w-full max-w-[1400px] max-h-[94vh] flex flex-col overflow-hidden border border-white/20 animate-in fade-in zoom-in duration-500">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 transition-all duration-700" style={{ backdropFilter: 'blur(8px)' }}>
+          <div data-modal-content className="bg-white rounded-[50px] shadow-2xl w-full max-w-[1400px] max-h-[94vh] flex flex-col overflow-hidden border border-white/20 animate-in fade-in zoom-in duration-500">
             <div className="flex items-center justify-between px-12 py-10 border-b border-gray-50 bg-gray-50/40">
               <div className="flex items-center gap-6">
                 <div className="w-16 h-16 bg-[#FF496D] rounded-[24px] flex items-center justify-center shadow-xl shadow-pink-100"><Tag className="w-8 h-8 text-white" /></div>
@@ -589,36 +776,49 @@ export default function AdminPage() {
                   </div>
                 </div>
               </div>
-              <button onClick={handleCloseResult} className="p-6 rounded-[30px] hover:bg-white hover:shadow-2xl transition-all group active:scale-90 shadow-sm border border-transparent hover:border-gray-100" aria-label="닫기"><X className="w-8 h-8 text-gray-400 group-hover:text-gray-900 transition-colors" /></button>
+              <div className="flex items-center gap-4">
+                {/* ZIP 내보내기 버튼 */}
+                <button
+                  onClick={handleExportZip}
+                  disabled={isExporting}
+                  className="p-6 rounded-[30px] hover:bg-white hover:shadow-2xl transition-all group active:scale-90 shadow-sm border border-transparent hover:border-gray-100 disabled:opacity-60 disabled:cursor-not-allowed"
+                  title="ZIP으로 내보내기"
+                  aria-label="ZIP으로 내보내기"
+                >
+                  <Archive className="w-8 h-8 text-gray-400 group-hover:text-[#FF496D] transition-colors" />
+                </button>
+                <button onClick={handleCloseResult} className="p-6 rounded-[30px] hover:bg-white hover:shadow-2xl transition-all group active:scale-90 shadow-sm border border-transparent hover:border-gray-100" aria-label="닫기"><X className="w-8 h-8 text-gray-400 group-hover:text-gray-900 transition-colors" /></button>
+              </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-12 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-12 custom-scrollbar" style={{ willChange: 'scroll-position', contain: 'layout style paint' }}>
               {selectedSegments.length > 0 ? (
                 <>
                   <div className="hidden xl:block">
-                    <div className="overflow-visible custom-scrollbar">
+                    <div className="overflow-visible custom-scrollbar" style={{ willChange: 'transform' }}>
                       <div className="grid grid-cols-12 gap-6 mb-10">
                         <TableHeader title="타임라인(초)" className="col-span-2 shadow-xl bg-gray-900 text-base py-4 rounded-2xl" />
                         <TableHeader title="대본" className="col-span-3 shadow-xl bg-gray-900 text-base py-4 rounded-2xl" />
                         <TableHeader title="화면 설계 및 상세 연출" className="col-span-7 shadow-xl bg-gray-900 text-base py-4 rounded-2xl" />
                       </div>
-                      <div className="space-y-6 pr-4">
+                      <div className="space-y-6 pr-4" style={{ contain: 'layout style paint' }}>
                         {selectedSegments.map((segment, index) => (
-                          <ScriptTableRow
-                            key={segment.id}
-                            segment={{ ...segment, script: renderHtml(segment.script || '') }}
-                            index={index}
-                            screenContent={renderHtml(parseVisualSource(segment.visualSource || '').screenContent)}
-                            expandedDesignReasons={expandedDesignReasons}
-                            hoveredDesignReason={hoveredDesignReason}
-                            onMouseEnter={setHoveredDesignReason}
-                            onMouseLeave={() => setHoveredDesignReason(null)}
-                            onToggleDesignReason={(id) => setExpandedDesignReasons(prev => {
-                              const newSet = new Set(prev);
-                              if (newSet.has(id)) newSet.delete(id); else newSet.add(id);
-                              return newSet;
-                            })}
-                          />
+                          <div key={segment.id} style={{ willChange: hasAnimated ? 'auto' : 'transform' }}>
+                            <ScriptTableRow
+                              segment={{ ...segment, script: renderHtml(segment.script || '') }}
+                              index={hasAnimated ? -1 : index}
+                              screenContent={renderHtml(parseVisualSource(segment.visualSource || '').screenContent)}
+                              expandedDesignReasons={expandedDesignReasons}
+                              hoveredDesignReason={hoveredDesignReason}
+                              onMouseEnter={setHoveredDesignReason}
+                              onMouseLeave={() => setHoveredDesignReason(null)}
+                              onToggleDesignReason={(id) => setExpandedDesignReasons(prev => {
+                                const newSet = new Set(prev);
+                                if (newSet.has(id)) newSet.delete(id); else newSet.add(id);
+                                return newSet;
+                              })}
+                            />
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -663,6 +863,9 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+
+      {/* ZIP 내보내기 로딩 오버레이 */}
+      <LoadingOverlay isVisible={isExporting} text="압축 파일 생성 중" />
 
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar { width: 10px; }

@@ -26,13 +26,11 @@ const ScriptTableRow = memo(function ScriptTableRow({
   onMouseLeave,
   onToggleDesignReason,
 }: ScriptTableRowProps) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
-      className="grid grid-cols-12 gap-3 items-stretch"
-    >
+  // index가 -1이면 애니메이션 없이 즉시 표시 (스크롤 성능 최적화)
+  const shouldAnimate = index >= 0;
+  
+  const content = (
+    <div className="grid grid-cols-12 gap-3 items-stretch">
       {/* 타임라인(초) 열 */}
       <div className={`col-span-2 flex flex-col items-center justify-center rounded-2xl p-4 shadow-sm border border-[#EDEDF1] ${
         segment.section.includes('후킹') ? 'bg-[#FFF0F3]' : 'bg-white'
@@ -104,8 +102,24 @@ const ScriptTableRow = memo(function ScriptTableRow({
           </button>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
+
+  // 애니메이션이 필요할 때만 motion.div 사용, 아니면 일반 div
+  if (shouldAnimate) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: index * 0.05, duration: 0.3 }}
+        style={{ willChange: 'transform' }}
+      >
+        {content}
+      </motion.div>
+    );
+  }
+
+  return content;
 });
 
 export default ScriptTableRow;
