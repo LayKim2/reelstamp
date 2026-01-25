@@ -405,7 +405,7 @@ export default function ScriptCreationPage() {
         reel_topic: topic,
         user_request: content,
         user_id: user.id,
-        reel_length: videoLength ? REEL_LENGTH_MAP[videoLength] : null,
+        reel_length: videoLength ? REEL_LENGTH_MAP[videoLength] : 30, 
         extra_request: additionalContent || null,
         video_urls: videoUrls,
         video_source_mode: videoSourceMode,
@@ -416,13 +416,14 @@ export default function ScriptCreationPage() {
         onSuccess: async (data) => {
           setIsSubmitting(false);
           
-          // 영상이 있는 경우 구독 정보 새로고침 (영상 횟수 업데이트)
-          if (videoFiles.length > 0) {
-            await refreshSubscription();
+          if (data.jobId) {
+            // 영상이 있는 경우 구독 정보 새로고침 (영상 횟수 업데이트)
+            if (videoFiles.length > 0) {
+              await refreshSubscription();
+            }
+            
+            router.push('/my-reels');
           }
-          
-          // sessionId를 쿼리 파라미터로 전달하여 이동
-          router.push(`/contents/script-creation/result?sessionId=${data.sessionId}`);
         },
         onError: (error: any) => {
           setIsSubmitting(false);

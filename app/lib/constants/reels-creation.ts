@@ -21,3 +21,14 @@ export const REEL_CATEGORY_OPTIONS = Object.keys(REEL_CATEGORY_MAP) as Array<key
 // 영상 길이 옵션 목록 (UI에서 사용)
 export const REEL_LENGTH_OPTIONS = Object.keys(REEL_LENGTH_MAP) as Array<keyof typeof REEL_LENGTH_MAP>;
 
+// 대본 생성 Job 상태 상수
+export const JOB_STATUS = {
+  PENDING: 'PENDING',
+  DOWNLOADING: 'DOWNLOADING',
+  GENERATING: 'GENERATING',
+  SAVING: 'SAVING',
+  SUCCEEDED: 'SUCCEEDED',
+  FAILED: 'FAILED',
+  IN_PROGRESS: 'IN_PROGRESS',
+} as const;
+

@@ -1,14 +1,14 @@
 // AI 대본 생성 로직을 캡슐화한 커스텀 훅
 import { useMutation } from '@tanstack/react-query';
 import { generateReelScript } from '@/app/lib/api/reels-creation';
-import { ReelScriptRequest, ReelScriptResponse } from '@/app/types/reels-creation';
+import { ReelScriptRequest, ReelScriptJobResponse } from '@/app/types/reels-creation';
 import { ApiErrorResponse, ValidationErrorResponse } from '@/app/types/api';
 
 export function useGenerateScript() {
-  return useMutation<ReelScriptResponse, ApiErrorResponse, ReelScriptRequest>({
+  return useMutation<ReelScriptJobResponse, ApiErrorResponse, ReelScriptRequest>({
     mutationFn: (request: ReelScriptRequest) => generateReelScript(request),
     onSuccess: (data) => {
-      console.log('[Script Generation Success]', data);
+      console.log('[Script Generation Job Success]', data);
     },
     onError: (error) => {
       const statusCode = error.response?.status;

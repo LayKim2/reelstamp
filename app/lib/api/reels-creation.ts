@@ -1,6 +1,7 @@
 // 릴스 제작 관련 클라이언트 사이드 API 호출 유틸리티
-import { ReelScriptRequest, ReelScriptResponse, ChatReelScriptRequest, ChatReelScriptResponse, ApplyReelScriptRequest } from '@/app/types/reels-creation';
+import { ReelScriptRequest, ReelScriptResponse, ReelScriptJobRequest, ReelScriptJobResponse, ChatReelScriptRequest, ChatReelScriptResponse, ApplyReelScriptRequest } from '@/app/types/reels-creation';
 import { ValidationErrorResponse } from '@/app/types/api';
+import { sanitizeFilename } from '@/app/lib/utils/filename';
 
 /**
  * ReelScriptRequest를 FormData로 변환
@@ -49,16 +50,17 @@ export const uploadVideosToBlob = async (files: File[]): Promise<string[]> => {
 
   const uploadPromises = files.map(async (file) => {
     try {
-      // 클라이언트에서 직접 업로드
-      // handleUploadUrl로 서버의 업로드 핸들러 지정
-      const blob = await upload(file.name, file, {
+      const sanitizedName = sanitizeFilename(file.name);
+      const sanitizedFile = new File([file], sanitizedName, { type: file.type });
+      
+      const blob = await upload(sanitizedName, sanitizedFile, {
         access: 'public',
         handleUploadUrl: '/api/upload-video',
       });
 
       return blob.url;
     } catch (error: any) {
-      console.error('[Video Upload Error]', error);
+      console.error('[Video Upload Error]', error?.message);
       throw {
         response: {
           status: error.status || 500,
@@ -74,15 +76,28 @@ export const uploadVideosToBlob = async (files: File[]): Promise<string[]> => {
 };
 
 /**
- * AI 대본 생성 API 호출 (Next.js 프록시 라우트 경유)
+ * AI 대본 생성 Job API 호출 (Next.js 프록시 라우트 경유)
  * @param request 대본 생성 요청 데이터
  */
-export const generateReelScript = async (request: ReelScriptRequest): Promise<ReelScriptResponse> => {
-  const formData = createReelScriptFormData(request);
+export const generateReelScript = async (request: ReelScriptRequest): Promise<ReelScriptJobResponse> => {
+  // ReelScriptRequest를 ReelScriptJobRequest 형식으로 변환
+  const jobRequest: ReelScriptJobRequest = {
+    reelType: request.reel_type,
+    reelTopic: request.reel_topic,
+    userRequest: request.user_request,
+    reelLength: request.reel_length || 0,
+    extraRequest: request.extra_request || '',
+    videoSourceMode: request.video_source_mode || 'no_video',
+    videoUrls: request.video_urls || [],
+  };
+
   // Next.js 프록시 라우트로 요청 (CORS 문제 해결)
-  const response = await fetch('/ai/generate-reel-script', {
+  const response = await fetch('/ai/generate-reel-script-job', {
     method: 'POST',
-    body: formData, // FormData는 Content-Type을 자동으로 설정하므로 헤더에 명시하지 않음
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(jobRequest),
   });
 
   if (!response.ok) {
@@ -109,7 +124,7 @@ export const generateReelScript = async (request: ReelScriptRequest): Promise<Re
     };
   }
 
-  const data: ReelScriptResponse = await response.json();
+  const data: ReelScriptJobResponse = await response.json();
   return data;
 };
 

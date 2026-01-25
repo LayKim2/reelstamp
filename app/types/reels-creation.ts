@@ -13,7 +13,18 @@ export interface ReelScriptRequest {
   video_source_mode?: 'uploaded_only' | 'uploaded_plus_new' | 'no_video';
 }
 
-// 대본 세그먼트 타입 (타임라인별 구분)
+// 대본 생성 Job 요청 타입
+export interface ReelScriptJobRequest {
+  reelType: string;
+  reelTopic: string;
+  userRequest: string;
+  reelLength: number;
+  extraRequest: string;
+  videoSourceMode: 'uploaded_only' | 'uploaded_plus_new' | 'no_video';
+  videoUrls: string[];
+}
+
+// 대본 세그먼트 타입
 export interface ScriptSegment {
   id: string;
   section: string; // 구간 (후킹, 전개 등)
@@ -42,6 +53,13 @@ export interface ReelScriptResponse {
     extraRequest: string;
     videoSourceMode: string;
   }; // 입력 요약 정보 (백엔드 API 응답에 포함될 수 있음)
+}
+
+// 대본 생성 Job 응답 타입 
+export interface ReelScriptJobResponse {
+  jobId: string;
+  status: string;
+  progressPercentage: number;
 }
 
 // 챗봇 대화 요청 타입: 완성된 대본에 대해 챗봇으로 대화하기 위한 요청

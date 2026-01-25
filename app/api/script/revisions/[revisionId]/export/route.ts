@@ -1,7 +1,3 @@
-// 대본 ZIP 내보내기 API Route:
-// Spring API의 GET /api/script/revisions/{revisionId}/export를 프록시하여
-// 클라이언트에서 /api/script/revisions/{revisionId}/export로 ZIP 파일을 다운로드할 수 있게 합니다.
-
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
@@ -50,23 +46,43 @@ export async function GET(
       },
     });
   } catch (error: any) {
+    let errorMessage = '대본 ZIP 내보내기 중 오류가 발생했습니다.';
+    let errorCode = 'SCRIPT_EXPORT_ERROR';
+    
+    if (error.response?.data) {
+      try {
+        let errorData = error.response.data;
+        if (Buffer.isBuffer(errorData)) {
+          const errorString = errorData.toString('utf-8');
+          errorData = JSON.parse(errorString);
+        }
+        
+        if (typeof errorData === 'object' && errorData !== null) {
+          errorMessage = errorData.message || errorMessage;
+          errorCode = errorData.errorCode || errorCode;
+        }
+      } catch (parseError) {
+        if (Buffer.isBuffer(error.response.data)) {
+          errorMessage = error.response.data.toString('utf-8');
+        }
+      }
+    }
+
     console.error('[ScriptExport API Error]', {
       message: error.message,
       status: error.response?.status,
-      data: error.response?.data,
+      errorMessage,
+      errorCode,
     });
 
     const status = error.response?.status || 500;
-    const message =
-      error.response?.data?.message ||
-      '대본 ZIP 내보내기 중 오류가 발생했습니다.';
 
     return NextResponse.json(
       {
         success: false,
         status,
-        message,
-        errorCode: error.response?.data?.errorCode || 'SCRIPT_EXPORT_ERROR',
+        message: errorMessage,
+        errorCode,
         data: null,
       },
       { status }
