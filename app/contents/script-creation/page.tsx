@@ -314,15 +314,64 @@ export default function ScriptCreationPage() {
     }
   }, [videoFiles, videoPreviewUrls, videoDurations]);
 
+  // 폼 데이터를 sessionStorage에 저장하는 함수
+  const saveFormData = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      const formData = {
+        category,
+        topic,
+        content,
+        videoLength,
+        additionalContent,
+        isAdditionalOpen,
+        excludeRecommendedSources,
+      };
+      sessionStorage.setItem('scriptCreationFormData', JSON.stringify(formData));
+    }
+  }, [category, topic, content, videoLength, additionalContent, isAdditionalOpen, excludeRecommendedSources]);
+
+  // sessionStorage에서 폼 데이터를 복원하는 함수
+  const restoreFormData = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      const savedData = sessionStorage.getItem('scriptCreationFormData');
+      if (savedData) {
+        try {
+          const formData = JSON.parse(savedData);
+          if (formData.category) setCategory(formData.category);
+          if (formData.topic) setTopic(formData.topic);
+          if (formData.content) setContent(formData.content);
+          if (formData.videoLength) setVideoLength(formData.videoLength);
+          if (formData.additionalContent) setAdditionalContent(formData.additionalContent);
+          if (formData.isAdditionalOpen !== undefined) setIsAdditionalOpen(formData.isAdditionalOpen);
+          if (formData.excludeRecommendedSources !== undefined) setExcludeRecommendedSources(formData.excludeRecommendedSources);
+          
+          // 복원 후 저장된 데이터 삭제
+          sessionStorage.removeItem('scriptCreationFormData');
+        } catch (error) {
+          console.error('폼 데이터 복원 실패:', error);
+          sessionStorage.removeItem('scriptCreationFormData');
+        }
+      }
+    }
+  }, []);
+
+  // 페이지 마운트 시 폼 데이터 복원
+  useEffect(() => {
+    if (mounted && isAuthenticated) {
+      restoreFormData();
+    }
+  }, [mounted, isAuthenticated, restoreFormData]);
+
   // 제출 핸들러 (메모이제이션)
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
     // 로그인 인증 체크
     if (!isAuthenticated || !user) {
-      // 현재 경로를 저장하고 로그인 페이지로 리다이렉트
+      // 현재 경로와 폼 데이터를 저장하고 로그인 페이지로 리다이렉트
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('previousPath', pathname);
+        saveFormData();
         router.push(`/login?returnUrl=${encodeURIComponent(pathname)}`);
       }
       return;
@@ -474,6 +523,7 @@ export default function ScriptCreationPage() {
     additionalContent,
     generateScript,
     resetApi,
+    saveFormData,
   ]);
 
   return (
@@ -493,10 +543,10 @@ export default function ScriptCreationPage() {
         {/* 페이지 헤더 */}
         <div className="mb-8 text-center">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
-            기획·대본 제작
+            시나리오 제작
           </h1>
           <p className="text-base sm:text-lg text-gray-600">
-            100만 조회수 릴스를 분석하여 나만의 릴스 기획과 대본을 생성해드립니다
+            100만뷰 릴스 구조를 기반으로 나만의 대본·영상 시나리오를 생성해드립니다
           </p>
         </div>
 
@@ -570,7 +620,7 @@ export default function ScriptCreationPage() {
                   id="topic"
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
-                  placeholder="만들고자 하는 영상 주제를 입력해주세요"
+                  placeholder="만들고자 하는 릴스 주제를 입력해주세요 (ex. 1억 모으는 세가지 방법)"
                   className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#FF6B8A] focus:ring-4 focus:ring-pink-100 text-base text-gray-900 placeholder:text-base placeholder:text-gray-400 transition-all shadow-sm"
                   required
                 />
@@ -592,7 +642,7 @@ export default function ScriptCreationPage() {
                     }}
                     rows={4}
                     maxLength={5000}
-                    placeholder="릴스에 담고 싶은 내용을 자유롭게 작성해주세요.&#10;구체적일수록 나만의 컨셉이 반영된 기획과 대본이 제공됩니다."
+                    placeholder="릴스에 담고싶은 내용을 구체적으로 작성해주세요. "
                     className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#FF6B8A] focus:ring-4 focus:ring-pink-100 resize-none overflow-hidden text-base text-gray-900 placeholder:text-base placeholder:text-gray-400 transition-all shadow-sm"
                     required
                   />
@@ -772,7 +822,7 @@ export default function ScriptCreationPage() {
                               adjustTextareaHeight(e.target as HTMLTextAreaElement);
                             }}
                             rows={4}
-                            placeholder="릴스에 추가로 담고 싶은 내용, 영상 소스, 또는 컨셉이 있다면 작성해주세요."
+                            placeholder="릴스에 필수로 포함할 내용이나 영상이 있다면 입력해주세요."
                             className="w-full px-4 py-3.5 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#FF6B8A] focus:ring-4 focus:ring-pink-100 resize-none overflow-hidden text-base text-gray-900 placeholder:text-base placeholder:text-gray-400 transition-all shadow-sm"
                           />
                         </div>

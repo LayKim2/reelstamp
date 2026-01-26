@@ -8,9 +8,9 @@ import { motion } from 'framer-motion';
  */
 export default function AlgorithmLogicSection() {
   const cards = [
-    { src: '/images/landing_AO1.svg', title: '100만뷰 구조', text: '수만 개의 성공 릴스 데이터 반영', delay: 0.1 },
-    { src: '/images/landing_AO2.svg', title: '대본 마스터', text: '시청자의 스크롤을 멈추게 할 대본', delay: 0.2, mt: true },
-    { src: '/images/landing_AO3.svg', title: '전환율 최적화', text: '댓글과 공유를 부르는 심리적 트리거 삽입', delay: 0.3 },
+    { src: '/images/landing_AO1.png', title: '100만뷰 구조', text: '수만 개의 성공 릴스 데이터 반영', delay: 0.1 },
+    { src: '/images/landing_AO2.png', title: '대본 마스터', text: '시청자의 스크롤을 멈추게 할 대본', delay: 0.2, mt: true },
+    { src: '/images/landing_AO3.png', title: '전환율 최적화', text: '댓글과 공유를 부르는 심리적 트리거 삽입', delay: 0.3 },
   ];
 
   return (
