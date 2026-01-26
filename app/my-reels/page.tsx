@@ -20,6 +20,8 @@ interface CompletedScenario {
   id: string;
   title: string;
   date: string; // YYYY.MM.DD
+  status?: string;
+  revisionId?: string;
 }
 
 interface RevisionResponse {
@@ -27,6 +29,7 @@ interface RevisionResponse {
   reelTopic: string;
   status: string;
   jobId: string;
+  revisionId?: string;
   createdAt: string;
 }
 
@@ -67,7 +70,10 @@ export default async function MyReelsPage() {
     
     if (response.data.success && response.data.data?.revisions) {
       generatingScenarios = response.data.data.revisions
-        .filter((revision) => revision.status === JOB_STATUS.PENDING)
+        .filter((revision) => {
+          const status = revision.status?.trim().toUpperCase();
+          return status !== JOB_STATUS.SUCCEEDED && status !== JOB_STATUS.FAILED;
+        })
         .map((revision) => ({
           id: revision.sessionId,
           jobId: revision.jobId,
@@ -77,11 +83,16 @@ export default async function MyReelsPage() {
         }));
       
       completedScenarios = response.data.data.revisions
-        .filter((revision) => revision.status !== JOB_STATUS.PENDING)
+        .filter((revision) => {
+          const status = revision.status?.trim().toUpperCase();
+          return status === JOB_STATUS.SUCCEEDED || status === JOB_STATUS.FAILED;
+        })
         .map((revision) => ({
           id: revision.sessionId,
           title: revision.reelTopic || '',
           date: formatDate(revision.createdAt),
+          status: revision.status,
+          revisionId: revision.revisionId,
         }))
         .sort((a, b) => {
           const dateA = a.date.split('.').join('');

@@ -317,14 +317,22 @@ export default function MyReelsClient({
                   key={`generating-${scenario.id}-${index}`}
                   className="bg-[#FFF0F3] rounded-xl px-6 py-4 flex items-center justify-between"
                 >
-                  <span className="text-base sm:text-lg font-medium text-gray-900">
-                    {scenario.isFailed ? `[실패] ${scenario.title}` : scenario.title}
+                  <span
+                    className={`text-base sm:text-lg font-medium ${
+                      scenario.isFailed ? 'text-red-700' : 'text-gray-900'
+                    }`}
+                  >
+                    {scenario.isFailed ? `[Failed] ${scenario.title}` : scenario.title}
                   </span>
                   <div className="flex items-center gap-3">
                     {!scenario.isFailed && (
                       <Loader2 className="w-5 h-5 text-[#FF4081] animate-spin" />
                     )}
-                    <span className="text-base sm:text-lg font-bold text-[#FF4081]">
+                    <span
+                      className={`text-base sm:text-lg font-bold ${
+                        scenario.isFailed ? 'text-red-700' : 'text-[#FF4081]'
+                      }`}
+                    >
                       {scenario.isFailed ? '실패' : `생성 중 ${scenario.displayProgress}%`}
                     </span>
                   </div>
