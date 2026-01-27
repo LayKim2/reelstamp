@@ -1,6 +1,4 @@
 // 릴스 제작 관련 타입 정의
-import { ValidationErrorResponse } from './api';
-
 // 대본 생성 요청 타입
 export interface ReelScriptRequest {
   reel_type: 'information' | 'review' | 'vlog' | 'other';
@@ -60,6 +58,18 @@ export interface ReelScriptJobResponse {
   jobId: string;
   status: string;
   progressPercentage: number;
+}
+
+// 대본 재생성 응답 타입
+export interface RegenerateReelScriptResponse {
+  jobId: string;
+  status: string;
+  progressPercentage: number;
+  result?: Record<string, unknown>;
+  error?: {
+    code: string;
+    message: string;
+  } | null;
 }
 
 // 챗봇 대화 요청 타입: 완성된 대본에 대해 챗봇으로 대화하기 위한 요청

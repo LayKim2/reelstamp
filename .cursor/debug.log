@@ -1,0 +1,2 @@
+{"location":"route.ts:6","message":"POST handler entry","data":{"method":"POST","url":"http://localhost:3000/api/upload-video"},"timestamp":1769406519908,"sessionId":"debug-session","runId":"run1","hypothesisId":"A,B,C,D,E"}
+{"location":"route.ts:10","message":"User auth check","data":{"hasUser":false},"timestamp":1769406519916,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}

@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, ChevronRight, Loader2 } from 'lucide-react';
+import { Search, ChevronRight, Loader2, RefreshCw } from 'lucide-react';
 import { JOB_STATUS } from '@/app/lib/constants/reels-creation';
+import { regenerateReelScript } from '@/app/lib/api/reels-creation';
 
 interface GeneratingScenario {
   id: string;
@@ -19,6 +20,8 @@ interface CompletedScenario {
   id: string;
   title: string;
   date: string;
+  status?: string;
+  revisionId?: string;
 }
 
 interface InitialGeneratingScenario {
@@ -58,6 +61,7 @@ export default function MyReelsClient({
   const [generatingScenarios, setGeneratingScenarios] = useState<GeneratingScenario[]>(
     initialGeneratingScenarios.map((s) => ({ ...s, displayProgress: s.progress }))
   );
+  const [regeneratingRevisionIds, setRegeneratingRevisionIds] = useState<string[]>([]);
   const pollingIntervalsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const animationIntervalsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const generatingAnimationsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
@@ -76,6 +80,44 @@ export default function MyReelsClient({
       setCurrentPage(1);
     }
   }, [searchQuery]);
+
+  const handleRegenerateClick = async (
+    event: React.MouseEvent,
+    scenario: CompletedScenario
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!scenario.revisionId) {
+      console.error('[MyReelsClient] regenerate 클릭 - revisionId 없음', { scenario });
+      return;
+    }
+
+    if (regeneratingRevisionIds.includes(scenario.revisionId)) {
+      return;
+    }
+
+    setRegeneratingRevisionIds((prev) => [...prev, scenario.revisionId!]);
+
+    try {
+      await regenerateReelScript(scenario.revisionId);
+      router.refresh();
+    } catch (error: unknown) {
+      const serializedError =
+        error instanceof Error
+          ? { message: error.message, stack: error.stack }
+          : error;
+
+      console.error('[MyReelsClient] 재생성 API 호출 중 오류', {
+        revisionId: scenario.revisionId,
+        error: serializedError,
+      });
+    } finally {
+      setRegeneratingRevisionIds((prev) =>
+        prev.filter((id) => id !== scenario.revisionId)
+      );
+    }
+  };
 
   const animateProgress = (jobId: string, start: number, end: number) => {
     const existingInterval = animationIntervalsRef.current.get(jobId);
@@ -367,22 +409,55 @@ export default function MyReelsClient({
           </div>
 
           {/* 시나리오 리스트 */}
-          <div className="space-y-0">
+          <div className="my-reels-completed-list space-y-0">
             {paginatedScenarios.length > 0 ? (
-              paginatedScenarios.map((scenario) => (
-                <div
-                  key={scenario.id}
-                  onClick={() => router.push(`/contents/script-creation/result?sessionId=${scenario.id}`)}
-                  className={`my-reels-scenario-item flex items-center justify-between py-4 cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-200 last:border-b-0`}
-                >
-                  <span className="text-base sm:text-lg font-medium text-gray-900">
-                    {scenario.title}
-                  </span>
-                  <span className="text-base sm:text-lg font-medium text-gray-600">
-                    {scenario.date}
-                  </span>
-                </div>
-              ))
+              paginatedScenarios.map((scenario) => {
+                const isFailed =
+                  scenario.status?.trim().toUpperCase() === JOB_STATUS.FAILED;
+                const isRegenerating =
+                  !!scenario.revisionId &&
+                  regeneratingRevisionIds.includes(scenario.revisionId);
+
+                return (
+                  <div
+                    key={scenario.id}
+                    onClick={() => {
+                      if (isFailed) return;
+                      router.push(
+                        `/contents/script-creation/result?sessionId=${scenario.id}`
+                      );
+                    }}
+                    className={`my-reels-scenario-item flex items-center justify-between py-4 cursor-pointer hover:bg-[#FFF0F3] transition-colors border-b border-gray-200 last:border-b-0`}
+                  >
+                    <div className="my-reels-scenario-title-wrapper flex items-center gap-2">
+                      <span
+                        className={`my-reels-scenario-title text-base sm:text-lg font-medium ${
+                          isFailed ? 'text-red-600' : 'text-gray-900'
+                        }`}
+                      >
+                        {scenario.title}
+                      </span>
+                      {isFailed && (
+                        <button
+                          type="button"
+                          className="my-reels-regenerate-icon-button flex items-center justify-center"
+                          onClick={(event) => handleRegenerateClick(event, scenario)}
+                          disabled={isRegenerating}
+                        >
+                          <RefreshCw
+                            className={`my-reels-regenerate-icon w-4 h-4 text-red-500 ${
+                              isRegenerating ? 'animate-spin opacity-70' : ''
+                            }`}
+                          />
+                        </button>
+                      )}
+                    </div>
+                    <span className="my-reels-scenario-date text-base sm:text-lg font-medium text-gray-600">
+                      {scenario.date}
+                    </span>
+                  </div>
+                );
+              })
             ) : (
               <div className="py-12 text-center text-gray-600 text-sm sm:text-base">
                 검색 결과가 없습니다.

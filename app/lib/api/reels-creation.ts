@@ -1,5 +1,14 @@
 // 릴스 제작 관련 클라이언트 사이드 API 호출 유틸리티
-import { ReelScriptRequest, ReelScriptResponse, ReelScriptJobRequest, ReelScriptJobResponse, ChatReelScriptRequest, ChatReelScriptResponse, ApplyReelScriptRequest } from '@/app/types/reels-creation';
+import {
+  ReelScriptRequest,
+  ReelScriptResponse,
+  ReelScriptJobRequest,
+  ReelScriptJobResponse,
+  ChatReelScriptRequest,
+  ChatReelScriptResponse,
+  ApplyReelScriptRequest,
+  RegenerateReelScriptResponse,
+} from '@/app/types/reels-creation';
 import { ValidationErrorResponse } from '@/app/types/api';
 import { sanitizeFilename } from '@/app/lib/utils/filename';
 
@@ -224,6 +233,35 @@ export const applyReelScript = async (request: ApplyReelScriptRequest): Promise<
   }
 
   const data: ChatReelScriptResponse = await response.json();
+  return data;
+};
+
+/**
+ * AI 대본 재생성 API 호출
+ * @param revisionId 재생성할 대본의 리비전 ID
+ */
+export const regenerateReelScript = async (
+  revisionId: string
+): Promise<RegenerateReelScriptResponse> => {
+  const response = await fetch(`/ai/regenerate-reel-script/${revisionId}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw {
+      response: {
+        status: response.status,
+        data: errorData,
+      },
+      message: errorData.message || '대본 재생성 중 오류가 발생했습니다.',
+    };
+  }
+
+  const data: RegenerateReelScriptResponse = await response.json();
   return data;
 };
 
