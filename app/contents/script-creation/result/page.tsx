@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Send, ChevronDown, ChevronUp, Sparkles, Layout, Archive } from 'lucide-react';
 import Image from 'next/image';
 import { ReelScriptResponse, ScriptSegment, ChatReelScriptResponse } from '@/app/types/reels-creation';
-import { chatReelScript, getLatestReelScript, applyReelScript } from '@/app/lib/api/reels-creation';
+import { chatReelScript, getLatestReelScript, applyReelScript, applyReelScriptJob } from '@/app/lib/api/reels-creation';
 import { useAuth } from '@/app/components/providers/AuthProvider';
 import ScriptTableRow from '@/app/components/features/script-creation/ScriptTableRow';
 import ScriptMobileCard from '@/app/components/features/script-creation/ScriptMobileCard';
@@ -102,8 +102,9 @@ function ScriptResultContent() {
     return true; // SSR 시 기본값
   });
   const [isTyping, setIsTyping] = useState(true); // 타이핑 중인지 여부
-  const [isLoading, setIsLoading] = useState(false); // 챗봇 API 호출 중인지 여부
+  const [isLoading, setIsLoading] = useState(false); // 챗봇 API 및 대본 수정 API 호출 중인지 여부
   const [isExporting, setIsExporting] = useState(false); // ZIP 내보내기 진행 여부
+  const [isApplyingSuggestion, setIsApplyingSuggestion] = useState(false); // 대본 수정 제안 적용 중 여부 (스켈레톤 로딩 표시용)
   const [expandedDesignReasons, setExpandedDesignReasons] = useState<Set<string>>(new Set()); // 설계 이유 말풍선 표시 상태 (클릭)
   const [hoveredDesignReason, setHoveredDesignReason] = useState<string | null>(null); // 설계 이유 말풍선 표시 상태 (hover)
   const [expandedMobileCards, setExpandedMobileCards] = useState<Set<string>>(new Set()); // 모바일 카드 확장 상태
@@ -325,35 +326,79 @@ function ScriptResultContent() {
     const msg = messages[index];
     if (!msg.suggestedChange || isLoading) return;
 
+    // 대본 수정 제안 적용 중으로 표시 (왼쪽 대본 영역 스켈레톤 로딩용 및 메시지 UI용)
+    setMessages(prev => prev.map((m, i) => 
+      i === index ? { ...m, isApplying: true } : m
+    ));
+    setIsApplyingSuggestion(true);
     setIsLoading(true);
+
     try {
-      // 대본 수정 적용 API 호출
-      const response = await applyReelScript({
+      // 1. 대본 수정 Job 생성 API 호출
+      await applyReelScriptJob({
         sessionId,
         parentRevisionId: revisionId,
         suggestedChange: msg.suggestedChange
       });
 
-      // 왼쪽 대본 테이블 데이터 업데이트
-      setResultData(response);
-      
-      // revisionId 업데이트
-      if (response.revisionId) {
-        setRevisionId(response.revisionId);
-        sessionStorage.setItem('revisionId', response.revisionId);
-      }
+      // 2. 폴링 시작 (최대 2분)
+      const startTime = Date.now();
+      const MAX_POLLING_TIME = 120000; // 2분
+      const POLLING_INTERVAL = 1500; // 1.5초
 
-      // 메시지 상태 업데이트 (적용됨 표시)
-      setMessages(prev => prev.map((m, i) => 
-        i === index ? { ...m, isApplied: true } : m
-      ));
+      const poll = async () => {
+        try {
+          if (Date.now() - startTime > MAX_POLLING_TIME) {
+            throw new Error('대본 수정 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.');
+          }
 
-      // AI 완료 메시지 추가
-      const completionMessage = {
-        role: 'ai' as const,
-        content: '수정 사항이 대본에 반영되었습니다! ✨'
+          const data = await getLatestReelScript(sessionId);
+          
+          if (data.status === 'successed') {
+            // 성공 시 데이터 업데이트
+            setResultData(data);
+            
+            if (data.revisionId) {
+              setRevisionId(data.revisionId);
+              sessionStorage.setItem('revisionId', data.revisionId);
+            }
+
+            setMessages(prev => prev.map((m, i) => 
+              i === index ? { ...m, isApplied: true, isApplying: false } : m
+            ));
+
+            const completionMessage = {
+              role: 'ai' as const,
+              content: '수정 사항이 대본에 반영되었습니다! ✨'
+            };
+            setMessages(prev => [...prev, completionMessage]);
+            
+            setIsLoading(false);
+            setIsApplyingSuggestion(false);
+          } else if (data.status === 'failed') {
+            throw new Error('대본 수정 중 오류가 발생했습니다.');
+          } else {
+            // pending 상태면 다시 폴링
+            setTimeout(poll, POLLING_INTERVAL);
+          }
+        } catch (error: any) {
+          console.error('대본 수정 폴링 실패:', error);
+          const errorMessage = {
+            role: 'ai' as const,
+            content: error?.message || '대본 수정 적용 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+          };
+          setMessages(prev => {
+            const updated = prev.map((m, i) => 
+              i === index ? { ...m, isApplying: false } : m
+            );
+            return [...updated, errorMessage];
+          });
+          setIsLoading(false);
+          setIsApplyingSuggestion(false);
+        }
       };
-      setMessages(prev => [...prev, completionMessage]);
+
+      setTimeout(poll, POLLING_INTERVAL);
 
     } catch (error: any) {
       console.error('대본 수정 적용 실패:', error);
@@ -361,11 +406,16 @@ function ScriptResultContent() {
         role: 'ai' as const,
         content: error?.message || '대본 수정 적용 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
       };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
+      setMessages(prev => {
+        const updated = prev.map((m, i) => 
+          i === index ? { ...m, isApplying: false } : m
+        );
+        return [...updated, errorMessage];
+      });
       setIsLoading(false);
+      setIsApplyingSuggestion(false);
     }
-  }, [sessionId, revisionId, isLoading]);
+  }, [sessionId, revisionId, isLoading, messages]);
 
   // 수정 사항 거절 핸들러 (메모이제이션)
   const handleRejectSuggestion = useCallback((index: number) => {
@@ -684,70 +734,136 @@ function ScriptResultContent() {
 
                 {/* 테이블 바디 (전체 표시) */}
                 <div className="space-y-3 pr-2 pt-4">
-                  {segments.map((segment, index) => {
-                    const { screenContent } = parseVisualSource(segment.visualSource || '');
-                    // HTML 태그를 렌더링 가능한 형태로 변환
-                    const renderedScript = renderHtml(segment.script || '');
-                    const renderedScreenContent = renderHtml(screenContent);
+                  {isApplyingSuggestion ? (
+                    // 대본 수정 제안 적용 중일 때: PC 테이블 스켈레톤 로딩
+                    <div className="script-result-skeleton-pc space-y-3">
+                      {Array.from({ length: 5 }).map((_, idx) => (
+                        <div key={idx} className="animate-pulse">
+                          <div className="grid grid-cols-12 gap-3 items-stretch">
+                            {/* 타임라인 스켈레톤 */}
+                            <div className="col-span-2 bg-white border border-[#EDEDF1] rounded-2xl p-4 shadow-sm flex flex-col items-center justify-center space-y-2">
+                              <div className="h-5 w-12 rounded-lg bg-gray-200" />
+                              <div className="h-4 w-16 rounded-lg bg-gray-100" />
+                            </div>
+                            {/* 대본 스켈레톤 */}
+                            <div className="col-span-3 bg-white border border-[#EDEDF1] rounded-2xl p-4 shadow-sm flex flex-col justify-center space-y-2">
+                              <div className="h-4 w-full rounded-lg bg-gray-200" />
+                              <div className="h-4 w-5/6 rounded-lg bg-gray-100" />
+                              <div className="h-4 w-4/6 rounded-lg bg-gray-50" />
+                            </div>
+                            {/* 화면 설계 스켈레톤 */}
+                            <div className="col-span-7 bg-white border border-[#EDEDF1] rounded-2xl p-4 shadow-sm flex flex-col justify-center space-y-3">
+                              <div className="flex items-center gap-2">
+                                <div className="h-4 w-10 rounded bg-pink-100" />
+                                <div className="h-4 w-3/4 rounded-lg bg-gray-200" />
+                              </div>
+                              <div className="h-4 w-full rounded-lg bg-gray-100" />
+                              <div className="h-4 w-5/6 rounded-lg bg-gray-50" />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    segments.map((segment, index) => {
+                      const { screenContent } = parseVisualSource(segment.visualSource || '');
+                      // HTML 태그를 렌더링 가능한 형태로 변환
+                      const renderedScript = renderHtml(segment.script || '');
+                      const renderedScreenContent = renderHtml(screenContent);
 
-                    return (
-                      <ScriptTableRow
-                        key={segment.id}
-                        segment={{ ...segment, script: renderedScript }}
-                        index={index}
-                        screenContent={renderedScreenContent}
-                        expandedDesignReasons={expandedDesignReasons}
-                        hoveredDesignReason={hoveredDesignReason}
-                        onMouseEnter={setHoveredDesignReason}
-                        onMouseLeave={() => setHoveredDesignReason(null)}
-                        onToggleDesignReason={(id) => {
-                          setExpandedDesignReasons(prev => {
-                            const newSet = new Set(prev);
-                            if (newSet.has(id)) {
-                              newSet.delete(id);
-                            } else {
-                              newSet.add(id);
-                            }
-                            return newSet;
-                          });
-                        }}
-                      />
-                    );
-                  })}
+                      return (
+                        <ScriptTableRow
+                          key={segment.id}
+                          segment={{ ...segment, script: renderedScript }}
+                          index={index}
+                          screenContent={renderedScreenContent}
+                          expandedDesignReasons={expandedDesignReasons}
+                          hoveredDesignReason={hoveredDesignReason}
+                          onMouseEnter={setHoveredDesignReason}
+                          onMouseLeave={() => setHoveredDesignReason(null)}
+                          onToggleDesignReason={(id) => {
+                            setExpandedDesignReasons(prev => {
+                              const newSet = new Set(prev);
+                              if (newSet.has(id)) {
+                                newSet.delete(id);
+                              } else {
+                                newSet.add(id);
+                              }
+                              return newSet;
+                            });
+                          }}
+                        />
+                      );
+                    })
+                  )}
                 </div>
               </div>
             </div>
 
             {/* 모바일 카드 형태 (전체 표시) */}
             <div className="lg:hidden space-y-4 pr-2 pt-4">
-              {segments.map((segment, index) => {
-                const { screenContent } = parseVisualSource(segment.visualSource || '');
-                const isExpanded = expandedMobileCards.has(segment.id);
-                // HTML 태그를 렌더링 가능한 형태로 변환
-                const renderedScript = renderHtml(segment.script || '');
-                const renderedScreenContent = renderHtml(screenContent);
+              {isApplyingSuggestion ? (
+                // 대본 수정 제안 적용 중일 때: 모바일 카드 스켈레톤 로딩
+                <div className="script-result-skeleton-mobile space-y-4">
+                  {Array.from({ length: 4 }).map((_, idx) => (
+                    <div
+                      key={idx}
+                      className="animate-pulse bg-white rounded-2xl overflow-hidden border border-[#EDEDF1] shadow-sm"
+                    >
+                      {/* 카드 헤더 스켈레톤 */}
+                      <div className="bg-gray-100 px-4 py-3 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="h-5 w-24 rounded bg-gray-200" />
+                          <div className="h-4 w-12 rounded bg-gray-200" />
+                        </div>
+                        <div className="h-5 w-5 rounded-full bg-gray-200" />
+                      </div>
+                      {/* 카드 바디 스켈레톤 */}
+                      <div className="p-4 space-y-4">
+                        <div className="space-y-2">
+                          <div className="h-3 w-10 rounded bg-gray-100" />
+                          <div className="h-4 w-full rounded bg-gray-200" />
+                          <div className="h-4 w-5/6 rounded bg-gray-100" />
+                        </div>
+                        <div className="space-y-2">
+                          <div className="h-3 w-10 rounded bg-gray-100" />
+                          <div className="h-4 w-full rounded bg-gray-200" />
+                          <div className="h-4 w-3/4 rounded bg-gray-100" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                segments.map((segment, index) => {
+                  const { screenContent } = parseVisualSource(segment.visualSource || '');
+                  const isExpanded = expandedMobileCards.has(segment.id);
+                  // HTML 태그를 렌더링 가능한 형태로 변환
+                  const renderedScript = renderHtml(segment.script || '');
+                  const renderedScreenContent = renderHtml(screenContent);
 
-                return (
-                  <ScriptMobileCard
-                    key={segment.id}
-                    segment={{ ...segment, script: renderedScript }}
-                    index={index}
-                    screenContent={renderedScreenContent}
-                    isExpanded={isExpanded}
-                    onToggle={(id) => {
-                      setExpandedMobileCards(prev => {
-                        const newSet = new Set(prev);
-                        if (newSet.has(id)) {
-                          newSet.delete(id);
-                        } else {
-                          newSet.add(id);
-                        }
-                        return newSet;
-                      });
-                    }}
-                  />
-                );
-              })}
+                  return (
+                    <ScriptMobileCard
+                      key={segment.id}
+                      segment={{ ...segment, script: renderedScript }}
+                      index={index}
+                      screenContent={renderedScreenContent}
+                      isExpanded={isExpanded}
+                      onToggle={(id) => {
+                        setExpandedMobileCards(prev => {
+                          const newSet = new Set(prev);
+                          if (newSet.has(id)) {
+                            newSet.delete(id);
+                          } else {
+                            newSet.add(id);
+                          }
+                          return newSet;
+                        });
+                      }}
+                    />
+                  );
+                })
+              )}
             </div>
           </div>
 

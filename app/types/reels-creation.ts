@@ -43,6 +43,7 @@ export interface ReelScriptResponse {
   segments?: ScriptSegment[]; // 타임라인별 세그먼트 (새 구조)
   sessionId?: string; // 세션 ID (챗봇 대화 API에 필요)
   revisionId?: string; // 리비전 ID (챗봇 대화 API에 필요)
+  status?: string;  // 대본 생성/수정 상태
   selectedStructureId?: string; // 선택된 구조 ID
   selectedStructureName?: string; // 선택된 구조 이름
   inputSummary?: {
@@ -83,6 +84,18 @@ export interface ApplyReelScriptRequest {
   sessionId: string;
   parentRevisionId: string;
   suggestedChange: string;
+}
+
+// 대본 수정 적용 Job 응답 타입
+export interface ApplyReelScriptJobResponse {
+  jobId: string;
+  status: string;
+  progressPercentage: number;
+  result?: Record<string, unknown>;
+  error?: {
+    code: string;
+    message: string;
+  } | null;
 }
 
 // 비디오 소스 맵 타입

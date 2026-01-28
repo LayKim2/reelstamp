@@ -14,6 +14,7 @@ interface ChatMessageProps {
     isApplied?: boolean;
     isRejected?: boolean;
     isLoading?: boolean;
+    isApplying?: boolean;
   };
   idx: number;
   user?: {
@@ -75,22 +76,31 @@ const ChatMessage = memo(function ChatMessage({
         {msg.role === 'ai' && !msg.isLoading && msg.revisionMode === 'suggestion' && !msg.isApplied && !msg.isRejected && (
           <div className="mt-4 pt-4 border-t border-gray-100">
             <p className="text-[13px] font-bold text-[#FF496D] mb-3">
-              수정 사항을 적용하시겠습니까?
+              {msg.isApplying ? '수정 사항을 적용 중입니다...' : '수정 사항을 적용하시겠습니까?'}
             </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => onApplySuggestion?.(idx)}
-                className="flex-1 py-2 bg-[#FF496D] text-white text-xs font-bold rounded-lg hover:bg-[#E63E62] transition-colors"
-              >
-                예
-              </button>
-              <button
-                onClick={() => onRejectSuggestion?.(idx)}
-                className="flex-1 py-2 bg-gray-100 text-[#86889C] text-xs font-bold rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                아니오
-              </button>
-            </div>
+            {!msg.isApplying && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => onApplySuggestion?.(idx)}
+                  className="flex-1 py-2 bg-[#FF496D] text-white text-xs font-bold rounded-lg hover:bg-[#E63E62] transition-colors"
+                >
+                  예
+                </button>
+                <button
+                  onClick={() => onRejectSuggestion?.(idx)}
+                  className="flex-1 py-2 bg-gray-100 text-[#86889C] text-xs font-bold rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  아니오
+                </button>
+              </div>
+            )}
+            {msg.isApplying && (
+              <div className="flex items-center gap-1.5 py-1">
+                <span className="w-1.5 h-1.5 bg-[#FF496D] rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                <span className="w-1.5 h-1.5 bg-[#FF496D] rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                <span className="w-1.5 h-1.5 bg-[#FF496D] rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+              </div>
+            )}
           </div>
         )}
 

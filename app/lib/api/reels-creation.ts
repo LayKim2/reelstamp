@@ -7,6 +7,7 @@ import {
   ChatReelScriptRequest,
   ChatReelScriptResponse,
   ApplyReelScriptRequest,
+  ApplyReelScriptJobResponse,
   RegenerateReelScriptResponse,
 } from '@/app/types/reels-creation';
 import { ValidationErrorResponse } from '@/app/types/api';
@@ -233,6 +234,34 @@ export const applyReelScript = async (request: ApplyReelScriptRequest): Promise<
   }
 
   const data: ChatReelScriptResponse = await response.json();
+  return data;
+};
+
+/**
+ * AI 대본 수정 제안 적용 Job API 호출 (비동기 처리)
+ * @param request 수정 적용 요청 데이터
+ */
+export const applyReelScriptJob = async (request: ApplyReelScriptRequest): Promise<ApplyReelScriptJobResponse> => {
+  const response = await fetch('/ai/revise-reel-script-full-job', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw {
+      response: {
+        status: response.status,
+        data: errorData,
+      },
+      message: errorData.message || '대본 수정 요청 중 오류가 발생했습니다.',
+    };
+  }
+
+  const data: ApplyReelScriptJobResponse = await response.json();
   return data;
 };
 
